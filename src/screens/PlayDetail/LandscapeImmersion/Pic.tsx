@@ -72,7 +72,7 @@ export default memo(() => {
   })
 
   const imgSize = useMemo(() => {
-    return Math.min(winWidth * 0.45, winHeight * 0.6)
+    return Math.min(winWidth * 0.55, winHeight * 0.8)
   }, [winWidth, winHeight])
 
   const imageContainerStyle = useMemo(() => ({

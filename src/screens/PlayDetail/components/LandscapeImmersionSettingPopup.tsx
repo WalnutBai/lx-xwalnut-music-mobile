@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useRef, useState, useCallback } from 'react'
+import { forwardRef, useImperativeHandle, useRef, useState, useCallback, useMemo } from 'react'
 import { View, StyleSheet, TouchableOpacity } from 'react-native'
 import Popup, { type PopupType } from '@/components/common/Popup'
 import { useI18n } from '@/lang'
@@ -23,8 +23,22 @@ export default forwardRef<LandscapeImmersionSettingPopupType, {}>((props, ref) =
   const lrcFontSizeKey = 'playDetail.landscapeImmersion.style.lrcFontSize'
   const showControlKey = 'playDetail.landscapeImmersion.showControl'
 
+const lrcAlignKey = 'playDetail.landscapeImmersion.style.lrcAlign'
+
   const lrcFontSize = useSettingValue(lrcFontSizeKey)
   const showControl = useSettingValue(showControlKey)
+  const lrcAlign = useSettingValue(lrcAlignKey)
+
+  const setLrcAlign = (align: typeof ALIGN_LIST[number]) => {
+    if (lrcAlign == align) return
+    updateSetting({ [lrcAlignKey]: align })
+  }
+
+  const ALIGN_LIST = useMemo(() => [
+    { id: 'left', name: t('play_detail_setting_lrc_align_left') },
+    { id: 'center', name: t('play_detail_setting_lrc_align_center') },
+    { id: 'right', name: t('play_detail_setting_lrc_align_right') },
+  ] as const, [t])
 
   const [sliderSize, setSliderSize] = useState(lrcFontSize)
   const [isSliding, setSliding] = useState(false)
@@ -48,6 +62,7 @@ export default forwardRef<LandscapeImmersionSettingPopupType, {}>((props, ref) =
     setSliding(true)
   }
   const handleValueChange: SliderProps['onValueChange'] = (value) => {
+    updateSetting({ [lrcFontSizeKey]: value })
     setSliderSize(value)
   }
   const handleSlidingComplete: SliderProps['onSlidingComplete'] = (value) => {
@@ -56,13 +71,9 @@ export default forwardRef<LandscapeImmersionSettingPopupType, {}>((props, ref) =
   }
 
   const handleConfirm = useCallback(() => {
-    updateSetting({
-      [lrcFontSizeKey]: sliderSize,
-      [showControlKey]: tempShowControl,
-    })
     popupRef.current?.setVisible(false)
     setIsLandscapeImmersion(true)
-  }, [sliderSize, tempShowControl])
+  }, [])
 
   const handleCancel = useCallback(() => {
     popupRef.current?.setVisible(false)
@@ -86,6 +97,20 @@ export default forwardRef<LandscapeImmersionSettingPopupType, {}>((props, ref) =
               step={2}
               value={lrcFontSize}
             />
+          </View>
+        </View>
+
+        <View style={styles.group}>
+          <Text style={styles.label}>{t('play_detail_setting_lrc_align')}</Text>
+          <View style={styles.content}>
+            {ALIGN_LIST.map(({ id, name }) => (
+              <CheckBox
+                key={id}
+                check={lrcAlign == id}
+                label={name}
+                onChange={() => { setLrcAlign(id) }}
+              />
+            ))}
           </View>
         </View>
 

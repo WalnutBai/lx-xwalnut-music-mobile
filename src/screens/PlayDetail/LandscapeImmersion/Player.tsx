@@ -16,13 +16,13 @@ const ControlBtn = memo(() => {
   return (
     <View style={styles.controlBtn}>
       <TouchableOpacity onPress={playPrev} style={styles.btn}>
-        <Icon name="prevMusic" size={24} color="#fff" />
+        <Icon name="prevMusic" size={24} color={theme['c-primary-font-active']} />
       </TouchableOpacity>
       <TouchableOpacity onPress={togglePlay} style={[styles.btn, styles.playBtn]}>
-        <Icon name={isPlay ? 'pause' : 'play'} size={30} color="#fff" />
+        <Icon name={isPlay ? 'pause' : 'play'} size={30} color={theme['c-primary-font-active']} />
       </TouchableOpacity>
       <TouchableOpacity onPress={playNext} style={styles.btn}>
-        <Icon name="nextMusic" size={24} color="#fff" />
+        <Icon name="nextMusic" size={24} color={theme['c-primary-font-active']} />
       </TouchableOpacity>
     </View>
   )
@@ -36,11 +36,11 @@ export default memo(() => {
   return (
     <View style={styles.container}>
       <View style={styles.progressContainer}>
-        <Text style={styles.timeText}>{nowPlayTimeStr}</Text>
+        <Text style={styles.timeText} color={theme['c-400']}>{nowPlayTimeStr}</Text>
         <View style={styles.progress}>
           <Progress progress={progress} duration={maxPlayTime} buffered={buffered} />
         </View>
-        <Text style={styles.timeText}>{maxPlayTimeStr}</Text>
+        <Text style={styles.timeText} color={theme['c-400']}>{maxPlayTimeStr}</Text>
       </View>
       <ControlBtn />
     </View>
@@ -63,7 +63,6 @@ const styles = createStyle({
     marginHorizontal: 10,
   },
   timeText: {
-    color: '#fff',
     fontSize: 12,
     width: 45,
     textAlign: 'center',
@@ -78,8 +77,6 @@ const styles = createStyle({
     marginHorizontal: 20,
   },
   playBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 30,
     width: 60,
     height: 60,
     justifyContent: 'center',

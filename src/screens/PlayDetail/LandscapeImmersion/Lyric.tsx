@@ -2,8 +2,10 @@ import { memo, useMemo, useEffect, useRef, useCallback } from 'react'
 import {
   View,
   FlatList,
+  Dimensions,
   type FlatListProps,
   type LayoutChangeEvent,
+  TouchableOpacity,
 } from 'react-native'
 import { type Line, useLrcPlay, useLrcSet } from '@/plugins/lyric'
 import { createStyle } from '@/utils/tools'
@@ -18,33 +20,35 @@ interface LineProps {
   line: Line
   lineNum: number
   activeLine: number
-  onLayout: (lineNum: number, height: number, width: number) => void
+  onPress: (index: number) => void
 }
 
-const LrcLine = memo(({ line, lineNum, activeLine, onLayout }: LineProps) => {
+const LrcLine = memo(({ line, lineNum, activeLine, onPress }: LineProps) => {
   const theme = useTheme()
   const lrcFontSize = useSettingValue('playDetail.landscapeImmersion.style.lrcFontSize')
+  const lrcAlign = useSettingValue('playDetail.landscapeImmersion.style.lrcAlign')
   const size = lrcFontSize / 10
-  const lineHeight = setSpText(size) * 1.3
+  const lineHeight = setSpText(size) * 1.5 // 稍微增大行高
 
   const colors = useMemo(() => {
     const active = activeLine == lineNum
     return active
-      ? (['#fff', '#fff', 1] as const)
-      : (['rgba(255, 255, 255, 0.6)', 'rgba(255, 255, 255, 0.4)', 0.8] as const)
-  }, [activeLine, lineNum])
+      ? ([theme['c-primary-font-active'], theme['c-primary-alpha-200'], 1] as const)
+      : ([theme['c-450'], theme['c-400'], 0.8] as const)
+  }, [activeLine, lineNum, theme])
 
-  const handleLayout = ({ nativeEvent }: LayoutChangeEvent) => {
-    onLayout(lineNum, nativeEvent.layout.height, nativeEvent.layout.width)
-  }
+  const handlePress = useCallback(() => {
+    onPress(lineNum)
+  }, [onPress, lineNum])
 
   return (
-    <View style={styles.line} onLayout={handleLayout}>
+    <TouchableOpacity activeOpacity={0.7} onPress={handlePress}>
+      <View style={styles.line}>
       <AnimatedColorText
         color={colors[0]}
         opacity={colors[2]}
         size={size}
-        style={{ ...styles.lineText, lineHeight }}
+        style={{ ...styles.lineText, lineHeight, textAlign: lrcAlign }}
       >
         {line.text}
       </AnimatedColorText>
@@ -54,12 +58,13 @@ const LrcLine = memo(({ line, lineNum, activeLine, onLayout }: LineProps) => {
           color={colors[0]}
           opacity={colors[2]}
           size={size * 0.8}
-          style={{ ...styles.lineTranslationText, lineHeight: lineHeight * 0.8 }}
+          style={{ ...styles.lineTranslationText, lineHeight: lineHeight * 0.8, textAlign: lrcAlign }}
         >
           {lrc}
         </AnimatedColorText>
       ))}
     </View>
+  </TouchableOpacity>
   )
 })
 
@@ -69,12 +74,16 @@ export default memo(() => {
   const flatListRef = useRef<FlatList<Line>>(null)
   const isPauseScrollRef = useRef(false)
   const scrollTimoutRef = useRef<NodeJS.Timeout | null>(null)
-  const listLayoutInfoRef = useRef<{ lineHeights: number[], spaceHeight: number }>({
-    lineHeights: [],
-    spaceHeight: 0,
-  })
   const lineRef = useRef({ line: 0, prevLine: 0 })
-  const scrollCancelRef = useRef<(() => void) | null>(null)
+  const isShowLyricProgressSetting = useSettingValue('playDetail.isShowLyricProgressSetting')
+
+  const handleLinePress = useCallback((index: number) => {
+    if (!isShowLyricProgressSetting) return
+    const line = lyricLines[index]
+    if (line) {
+      global.app_event.setProgress(line.time / 1000)
+    }
+  }, [isShowLyricProgressSetting, lyricLines])
 
   const handleScrollToActive = useCallback((index = lineRef.current.line) => {
     if (index < 0 || !flatListRef.current || lyricLines.length <= index) return
@@ -90,13 +99,13 @@ export default memo(() => {
   }, [lyricLines.length])
 
   useEffect(() => {
-    listLayoutInfoRef.current.lineHeights = []
     lineRef.current.prevLine = 0
     lineRef.current.line = 0
     if (!flatListRef.current) return
     flatListRef.current.scrollToOffset({ offset: 0, animated: false })
     if (!lyricLines.length) return
-    setTimeout(() => handleScrollToActive(), 100)
+    const timeout = setTimeout(() => handleScrollToActive(), 100)
+    return () => clearTimeout(timeout)
   }, [lyricLines, handleScrollToActive])
 
   useEffect(() => {
@@ -107,18 +116,23 @@ export default memo(() => {
     handleScrollToActive()
   }, [line, playedLines, handleScrollToActive])
 
-  const handleLineLayout = useCallback((lineNum: number, height: number) => {
-    listLayoutInfoRef.current.lineHeights[lineNum] = height
+  const handleScrollBeginDrag = useCallback(() => {
+    isPauseScrollRef.current = true
+    if (scrollTimoutRef.current) clearTimeout(scrollTimoutRef.current)
   }, [])
 
-  const handleSpaceLayout = useCallback(({ nativeEvent }: LayoutChangeEvent) => {
-    listLayoutInfoRef.current.spaceHeight = nativeEvent.layout.height
-  }, [])
+  const handleScrollEndDrag = useCallback(() => {
+    if (scrollTimoutRef.current) clearTimeout(scrollTimoutRef.current)
+    scrollTimoutRef.current = setTimeout(() => {
+      isPauseScrollRef.current = false
+      handleScrollToActive()
+    }, 3000)
+  }, [handleScrollToActive])
 
   const renderItem: FlatListType['renderItem'] = ({ item, index }) => (
-    <LrcLine line={item} lineNum={index} activeLine={line} onLayout={handleLineLayout} />
+    <LrcLine line={item} lineNum={index} activeLine={line} onPress={handleLinePress} />
   )
-  const getkey: FlatListType['keyExtractor'] = (item, index) => `${index}${item.text}`
+  const getkey: FlatListType['keyExtractor'] = (item, index) => `${index}${item.text}${item.extendedLyrics.join('')}`
 
   return (
     <View style={styles.container}>
@@ -127,46 +141,55 @@ export default memo(() => {
         renderItem={renderItem}
         keyExtractor={getkey}
         style={{ flex: 1 }}
+        contentContainerStyle={styles.listContent}
         ref={flatListRef}
         showsVerticalScrollIndicator={false}
-        ListHeaderComponent={<View style={styles.space} onLayout={handleSpaceLayout} />}
-        ListFooterComponent={<View style={styles.space} />}
-        onScrollBeginDrag={() => { isPauseScrollRef.current = true }}
-        onScrollEndDrag={() => {
-          if (scrollTimoutRef.current) clearTimeout(scrollTimoutRef.current)
-          scrollTimoutRef.current = setTimeout(() => {
-            isPauseScrollRef.current = false
-            handleScrollToActive()
-          }, 3000)
-        }}
+        onScrollBeginDrag={handleScrollBeginDrag}
+        onScrollEndDrag={handleScrollEndDrag}
+        onMomentumScrollBegin={handleScrollBeginDrag}
+        onMomentumScrollEnd={handleScrollEndDrag}
         fadingEdgeLength={100}
-        initialNumToRender={20}
+        initialNumToRender={50}
+        maxToRenderPerBatch={50}
+        windowSize={10}
         onScrollToIndexFailed={(info) => {
-          setTimeout(() => handleScrollToActive(info.index), 100)
+          flatListRef.current?.scrollToOffset({
+            offset: info.averageItemLength * info.index,
+            animated: false,
+          })
+          setTimeout(() => {
+            if (flatListRef.current) {
+              flatListRef.current.scrollToIndex({
+                index: info.index,
+                animated: false,
+                viewPosition: 0.5,
+              })
+            }
+          }, 100)
         }}
       />
     </View>
   )
 })
 
+const { height: screenHeight } = Dimensions.get('window')
+
 const styles = createStyle({
   container: {
     flex: 1,
-    paddingLeft: 20,
+    paddingLeft: 40,
     paddingRight: 20,
   },
-  space: {
-    height: '50%',
+  listContent: {
+    paddingVertical: '48%', // 使用 padding 代替 header/footer 组件，解决滑动受限
   },
   line: {
-    paddingTop: 10,
-    paddingBottom: 10,
+    paddingVertical: 12,
   },
   lineText: {
-    textAlign: 'center',
+    // 移除居中
   },
   lineTranslationText: {
-    textAlign: 'center',
-    paddingTop: 5,
+    paddingTop: 8,
   },
 })

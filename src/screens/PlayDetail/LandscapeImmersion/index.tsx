@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef, useMemo } from 'react'
-import { View, BackHandler, StyleSheet, Image } from 'react-native'
+import { View, BackHandler, StyleSheet, Image, Dimensions } from 'react-native'
 import { Navigation } from 'react-native-navigation'
 import { setIsLandscapeImmersion } from '@/core/common'
 import { createStyle, toast } from '@/utils/tools'
@@ -14,6 +14,7 @@ import settingState from '@/store/setting/state'
 import Pic from './Pic'
 import Lyric from './Lyric'
 import Player from './Player'
+import RNFS from 'react-native-fs'
 
 export default memo(({ componentId }: { componentId: string }) => {
   const lastBackTime = useRef(0)
@@ -27,8 +28,17 @@ export default memo(({ componentId }: { componentId: string }) => {
   const pic = useMemo(() => {
     return customBgPicPath || dynamicPic || musicInfo.pic || (playMusicInfo.musicInfo ? ('progress' in playMusicInfo.musicInfo ? playMusicInfo.musicInfo.metadata.musicInfo.pic : playMusicInfo.musicInfo.pic) : null)
   }, [customBgPicPath, dynamicPic, musicInfo.pic, playMusicInfo.musicInfo])
-  const picOpacity = useSettingValue('theme.picOpacity')
+    const picOpacity = useSettingValue('theme.picOpacity')
   const blur = useSettingValue('theme.blur')
+
+  useEffect(() => {
+    const logPath = `${RNFS.DownloadDirectoryPath}/lx-music-window-log.txt`;
+    const logContent = `[${new Date().toISOString()}] Window size changed: ${JSON.stringify(windowSize)}\n`;
+    RNFS.appendFile(logPath, logContent, 'utf8')
+      .catch(err => {
+        console.error('Failed to write window size log:', err);
+      });
+  }, [windowSize]);
 
   useEffect(() => {
     // Hide status bar and lock orientation
@@ -51,7 +61,14 @@ export default memo(({ componentId }: { componentId: string }) => {
       window: {
         backgroundColor: 'transparent',
       },
-    })
+      android: {
+        drawBehindStatusBar: true,
+        drawBehindNavigationBar: true,
+        statusBarTranslucent: true,
+        navigationBarColor: 'transparent',
+        forceSatusBarLightContent: true,
+      },
+    } as any)
     screenkeepAwake()
 
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -87,21 +104,23 @@ export default memo(({ componentId }: { componentId: string }) => {
   }, [componentId])
 
   const bgStyle = useMemo(() => {
-    const isLandscape = windowSize.width > windowSize.height
-    if (!isLandscape) return {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: theme['c-content-background'],
-    }
+    const screen = windowSize
+    const max = Math.max(screen.width, screen.height)
+    const min = Math.min(screen.width, screen.height)
+    // 增加 10% 的尺寸冗余，确保彻底覆盖所有边缘和刘海区域
+    const overscan = 1.2
+    const width = min * overscan
+    const height = max * overscan
     return {
       position: 'absolute',
-      left: -(windowSize.width - windowSize.height) / 2,
-      top: (windowSize.width - windowSize.height) / 2,
-      width: windowSize.height,
-      height: windowSize.width,
+      left: (max - width) / 2,
+      top: (min - height) / 2,
+      width: width,
+      height: height,
       transform: [{ rotate: '-90deg' }],
       backgroundColor: theme['c-content-background'],
     } as any
-  }, [windowSize, theme])
+  }, [theme, windowSize])
 
   return (
     <View style={styles.container}>

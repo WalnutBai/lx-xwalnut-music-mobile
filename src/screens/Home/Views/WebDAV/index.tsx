@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   FlatList,
   Keyboard,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -27,6 +28,7 @@ import {
   listWebDAVFolders,
   saveWebDAVSelectedFolder,
   scanWebDAVSongs,
+  updateWebDAVMusicMeta,
 } from '@/core/webdavMusic/drive'
 import { getPicUrl } from '@/core/music'
 import settingState from '@/store/setting/state'
@@ -39,6 +41,7 @@ import {
   handleWebDAVCopyName,
   handleWebDAVDownloadAndImport,
 } from './WebDAVListAction'
+import { readMetadata, readPic } from '@/utils/localMediaMetadata'
 
 type ActiveTab = 'config' | 'list'
 const ITEM_HEIGHT = scaleSizeH(LIST_ITEM_HEIGHT)
@@ -226,6 +229,48 @@ export default memo(() => {
     })
   }, [syncSongsCover])
 
+  const handleRefresh = useCallback(() => {
+    setLoading(true)
+    setScanText('正在加载标签...')
+    void Promise.all(
+      songs.map(async (song) => {
+        if (!song.meta.filePath) return song
+        try {
+          const fileMetadata = await readMetadata(song.meta.filePath).catch(() => null)
+          const picPath = await readPic(song.meta.filePath).catch(() => null)
+          if (fileMetadata) {
+            const updates: Record<string, any> = {}
+            if (fileMetadata.albumName) updates.albumName = fileMetadata.albumName
+            if (fileMetadata.name && !song.name) updates.name = fileMetadata.name
+            if (fileMetadata.singer && !song.singer) updates.singer = fileMetadata.singer
+            if (picPath) {
+              const newPicUrl = picPath.startsWith('/') ? `file://${picPath}` : picPath
+              updates.picUrl = newPicUrl
+            }
+            if (Object.keys(updates).length > 0) {
+              await updateWebDAVMusicMeta(song.id, updates)
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
+        return song
+      })
+    ).then(() => {
+      return getWebDAVConfig()
+    }).then((config) => {
+      setSongs(config.songs ?? [])
+      setScanText('')
+      toast('标签加载完成')
+    }).catch((err: any) => {
+      const message = err.message ?? String(err)
+      setScanText(message)
+      toast(message, 'long')
+    }).finally(() => {
+      setLoading(false)
+    })
+  }, [songs])
+
   const showMenu = useCallback(
     (musicInfo: LX.WebDAV.MusicInfo, index: number, position: { x: number; y: number; w: number; h: number }) => {
       webDAVListMenuRef.current?.show(
@@ -270,6 +315,42 @@ export default memo(() => {
       musicInfo,
     }])
     toast('已添加到稍后播放')
+  }, [])
+
+  const handleLoadMetadata = useCallback(async (info: WebDAVSelectInfo) => {
+    const musicInfo = info.musicInfo
+    if (!musicInfo.meta.filePath) {
+      toast('请先下载歌曲')
+      return
+    }
+    try {
+      toast('正在读取标签...')
+      const fileMetadata = await readMetadata(musicInfo.meta.filePath)
+      const picPath = await readPic(musicInfo.meta.filePath).catch(() => null)
+      
+      const updates: Record<string, any> = {}
+      if (fileMetadata.albumName) updates.albumName = fileMetadata.albumName
+      if (fileMetadata.name && !musicInfo.name) updates.name = fileMetadata.name
+      if (fileMetadata.singer && !musicInfo.singer) updates.singer = fileMetadata.singer
+      if (picPath) {
+        const newPicUrl = picPath.startsWith('/') ? `file://${picPath}` : picPath
+        updates.picUrl = newPicUrl
+      }
+      
+      if (Object.keys(updates).length > 0) {
+        await updateWebDAVMusicMeta(musicInfo.id, updates)
+        setSongs(prevSongs => prevSongs.map(song => 
+          song.id === musicInfo.id 
+            ? { ...song, ...updates, meta: { ...song.meta, ...updates } }
+            : song
+        ))
+        toast('标签加载成功')
+      } else {
+        toast('没有新的标签信息')
+      }
+    } catch (error: any) {
+      toast(`加载标签失败：${error.message}`, 'long')
+    }
   }, [])
 
   const handleDownload = useCallback((info: WebDAVSelectInfo) => {
@@ -655,6 +736,13 @@ export default memo(() => {
             <Text color={theme['c-font-label']}>{searchText.trim() ? '没有匹配的歌曲' : '还没有扫描到歌曲'}</Text>
           </View>
         }
+        refreshControl={
+          <RefreshControl
+            colors={[theme['c-primary']]}
+            refreshing={loading}
+            onRefresh={handleRefresh}
+          />
+        }
       />
     </View>
   )
@@ -703,6 +791,7 @@ export default memo(() => {
         onEditMetadata={handleEditMetadata}
         onRemove={handleRemove}
         onCopyName={handleCopyName}
+        onLoadMetadata={handleLoadMetadata}
       />
       <MetadataEditModal ref={metadataEditTypeRef} onUpdate={handleUpdateMetadata} />
     </View>

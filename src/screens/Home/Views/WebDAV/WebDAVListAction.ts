@@ -1,7 +1,7 @@
 import { findMusic } from '@/utils/musicSdk'
-import { getWebDAVConfig, updateWebDAVMusicMeta, getWebDAVDownloadUrl } from '@/core/webdavMusic/drive'
+import { getWebDAVConfig, updateWebDAVMusicMeta, getWebDAVDownloadUrl, saveWebDAVConfig } from '@/core/webdavMusic/drive'
 import { downloadFile, existsFile, mkdir } from '@/utils/fs'
-import { toast, clipboardWriteText } from '@/utils/tools'
+import { toast, clipboardWriteText, requestStoragePermission } from '@/utils/tools'
 import settingState from '@/store/setting/state'
 import { btoa } from 'react-native-quick-base64'
 import { updateListMusics } from '@/core/list'
@@ -9,6 +9,13 @@ import { webDAVLog } from '@/core/webdavMusic/logger'
 import { readPic, readMetadata } from '@/utils/localMediaMetadata'
 
 export const handleWebDAVDownload = async (musicInfo: LX.WebDAV.MusicInfo): Promise<string | null> => {
+  // 先请求存储权限
+  const hasPermission = await requestStoragePermission()
+  if (!hasPermission) {
+    toast('请授予存储权限后重试', 'long')
+    return null
+  }
+
   const downloadUrl = getWebDAVDownloadUrl(musicInfo)
   const downloadDir = settingState.setting['download.path'] || '/storage/emulated/0/Music/LX-N Music'
   const fileName = musicInfo.meta.fileName
@@ -191,6 +198,13 @@ export const handleWebDAVBatchDownload = async (
   songs: LX.WebDAV.MusicInfo[], 
   onProgress?: (current: number, total: number, currentSong: string) => void
 ): Promise<string[]> => {
+  // 先请求存储权限
+  const hasPermission = await requestStoragePermission()
+  if (!hasPermission) {
+    toast('请授予存储权限后重试', 'long')
+    return []
+  }
+
   const downloadDir = settingState.setting['download.path'] || '/storage/emulated/0/Music/LX-N Music'
   const downloadedPaths: string[] = []
   
@@ -218,8 +232,17 @@ export const handleWebDAVBatchDownload = async (
         onProgress(currentIndex, songs.length, fileName)
       }
       
+      // 检查文件是否存在
+      const fileExists = await existsFile(filePath)
+      
+      // 如果配置中有 filePath 但文件不存在，清除 filePath 以便重新下载
+      if (musicInfo.meta.filePath && !fileExists) {
+        webDAVLog.info('handleWebDAVBatchDownload: file was deleted, clearing old filePath', { oldPath: musicInfo.meta.filePath })
+        await updateWebDAVMusicMeta(musicInfo.id, { filePath: undefined })
+      }
+      
       // 如果文件已存在，跳过下载
-      if (await existsFile(filePath)) {
+      if (fileExists) {
         webDAVLog.info('handleWebDAVBatchDownload: file already exists, skipping', { filePath })
         downloadedPaths.push(filePath)
         
@@ -372,7 +395,7 @@ export const handleWebDAVDownloadAndImport = async (
           _errorPath = []
           if (musicInfos.length) await add(listId, musicInfos)
           if (errorPath.length) await remove(listId, errorPath)
-        }, 1000)
+        }, 100)
       }
     }
     
@@ -386,7 +409,11 @@ export const handleWebDAVDownloadAndImport = async (
       if (!total) total = filePaths.length
       const paths = filePaths.slice(index + 1, index + 11)
       const musicInfos = await createLocalMusicInfos(paths, errorPath)
-      if (musicInfos.length) throttleUpdateMusics(musicInfos)
+      if (musicInfos.length) {
+        throttleUpdateMusics(musicInfos)
+        // 立即更新列表以刷新显示
+        await updateListMusics(musicInfos.map((info) => ({ id: LIST_IDS.DOWNLOAD, musicInfo: info })))
+      }
       setLoadingText(`正在读取标签 ${Math.min(index + 11, total)}/${total}...`)
       index += 10
       if (filePaths.length - 1 > index)

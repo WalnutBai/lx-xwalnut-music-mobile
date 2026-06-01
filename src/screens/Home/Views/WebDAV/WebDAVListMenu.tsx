@@ -17,6 +17,7 @@ export interface WebDAVListMenuProps {
   onEditMetadata: (selectInfo: SelectInfo) => void
   onRemove: (selectInfo: SelectInfo) => void
   onCopyName: (selectInfo: SelectInfo) => void
+  onLoadMetadata: (selectInfo: SelectInfo) => void
 }
 export interface WebDAVListMenuType {
   show: (selectInfo: SelectInfo, position: Position) => void
@@ -55,6 +56,7 @@ export default forwardRef<WebDAVListMenuType, WebDAVListMenuProps>((props, ref) 
 
       menu.push({ action: 'playLater', label: t('play_later') })
       menu.push({ action: 'fetchPicFromOnline', label: '在线封面' })
+      menu.push({ action: 'loadMetadata', label: '加载标签' })
       menu.push({ action: 'editMetadata', label: t('edit_metadata') })
       menu.push({ action: 'copyName', label: t('copy_name') })
       menu.push({ action: 'remove', label: t('delete') })
@@ -73,6 +75,7 @@ export default forwardRef<WebDAVListMenuType, WebDAVListMenuProps>((props, ref) 
       case 'playLater': props.onPlayLater(info); break
       case 'download': props.onDownload(info); break
       case 'fetchPicFromOnline': props.onFetchPicFromOnline(info); break
+      case 'loadMetadata': props.onLoadMetadata(info); break
       case 'editMetadata': props.onEditMetadata(info); break
       case 'copyName': props.onCopyName(info); break
       case 'remove': props.onRemove(info); break

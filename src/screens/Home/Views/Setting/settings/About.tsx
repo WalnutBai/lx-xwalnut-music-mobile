@@ -26,7 +26,7 @@ export default memo(() => {
       <View style={styles.part}>
         <Text style={styles.text}>本软件(LX-Netease Music简称LX-N Music)完全免费，代码已开源。开源地址：</Text>
         <TouchableOpacity onPress={openHomePage}>
-          <Text style={textLinkStyle}>https://github.com/souvenp/lx-netease-music-mobile</Text>
+          <Text style={textLinkStyle}>https://github.com/WalnutBai/lx-n-music-mobile-pro</Text>
         </TouchableOpacity>
       </View>
       <View style={styles.part}>

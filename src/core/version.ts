@@ -10,6 +10,7 @@ import {
 } from '@/utils/data'
 import { showVersionModal } from '@/navigation'
 import { Navigation } from 'react-native-navigation'
+import { log } from '@/utils/log'
 
 export const showModal = () => {
   if (versionState.showModal) return
@@ -75,20 +76,22 @@ export const checkUpdate = async (silent = false) => {
 export const downloadUpdate = () => {
   versionActions.setVersionInfo({ status: 'downloading' })
   versionActions.setProgress({ total: 0, current: 0 })
+  const version = versionState.versionInfo.newVersion!.version
+  log.info(`[Update] Starting download for version ${version}`)
 
   downloadNewVersion(
-    versionState.versionInfo.newVersion!.version,
+    version,
     (total: number, current: number) => {
-      // console.log(total, current)
       versionActions.setProgress({ total, current })
     }
   )
     .then(() => {
       versionActions.setVersionInfo({ status: 'downloaded' })
+      log.info(`[Update] Download completed for version ${version}`)
     })
-    .catch(() => {
+    .catch((err: any) => {
       versionActions.setVersionInfo({ status: 'error' })
-      // console.log(err)
+      log.error(`[Update] Download failed for version ${version}:`, err?.message || err || 'Unknown error')
     })
 }
 

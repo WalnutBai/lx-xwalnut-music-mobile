@@ -102,7 +102,7 @@ const regx = /(?:\d\w)+/g
 
 const handleRequestData = async (
   url,
-  { method = 'get', headers = {}, format = 'json', cache = 'no-store', ...options }
+  { method = 'get', headers = {}, format = 'json', cache = 'no-store', params, ...options }
 ) => {
   // console.log(url, options)
   headers = Object.assign(
@@ -115,6 +115,21 @@ const handleRequestData = async (
     headers.cookie = settingState.setting['common.wy_cookie']
   }
   options.cache = cache
+  
+  // 处理查询参数
+  if (params && Object.keys(params).length > 0) {
+    const searchParams = new URLSearchParams()
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null && value !== '') {
+        searchParams.append(key, value)
+      }
+    }
+    const queryString = searchParams.toString()
+    if (queryString) {
+      url += (url.includes('?') ? '&' : '?') + queryString
+    }
+  }
+  
   if (method.toLocaleLowerCase() === 'post' && !headers['Content-Type']) {
     if (options.form) {
       headers['Content-Type'] = 'application/x-www-form-urlencoded'
@@ -163,6 +178,7 @@ const handleRequestData = async (
     ...options,
     method,
     headers: Object.assign({}, defaultHeaders, headers),
+    url,
   }
 }
 
@@ -189,23 +205,16 @@ const fetchData = (url, { timeout = 15000, ...options }) => {
   }, timeout)
 
   return {
-    request: handleRequestData(url, options).then((options) => {
+    request: handleRequestData(url, options).then((processedOptions) => {
+      const finalUrl = processedOptions.url || url
+      delete processedOptions.url
       return global
-        .fetch(url, {
-          ...options,
+        .fetch(finalUrl, {
+          ...processedOptions,
           signal: controller.signal,
         })
         .then((resp) => {
             return (options.binary ? resp.blob() : resp.text()).then((text) => {
-              // --- 新增的调试代码 ---
-              console.log('--- Response Body for:', url, '---');
-              try {
-                // 尝试以 JSON 格式打印，如果失败则直接打印文本
-                console.log(JSON.parse(text));
-              } catch (e) {
-                console.log(text);
-              }
-              // --- 调试代码结束 ---
               return {
                 headers: resp.headers.map,
                 body: text,

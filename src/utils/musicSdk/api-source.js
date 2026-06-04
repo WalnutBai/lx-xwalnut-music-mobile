@@ -1,6 +1,7 @@
 import apiSourceInfo from './api-source-info'
 // import api_mobi_kw from './kw/api-mobi'
 import settingState from '@/store/setting/state'
+import bilibili from './bilibili'
 
 const apiList = {
   // mobi_api_kw: api_mobi_kw,
@@ -14,6 +15,10 @@ for (const api of apiSourceInfo) {
 const getAPI = (source) => apiList[`${settingState.setting['common.apiSource']}_api_${source}`]
 
 const apis = (source) => {
+  // bilibili 始终使用内置插件
+  if (source === 'bilibili') {
+    return bilibili
+  }
   if (/^user_api/.test(settingState.setting['common.apiSource'])) return global.lx.apis[source]
   const api = getAPI(source)
   if (api) return api

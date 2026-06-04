@@ -95,7 +95,9 @@ export const getOtherSource = async (
       interval: musicInfo.metadata.musicInfo.interval ?? '',
     }
   } else {
-    key = `${musicInfo.source}_${musicInfo.id}`
+    key = musicInfo.id?.startsWith(`${musicInfo.source}_`)
+      ? musicInfo.id
+      : `${musicInfo.source}_${musicInfo.id}`
     searchMusicInfo = {
       name: cleanedName,
       singer: cleanedSinger,

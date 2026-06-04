@@ -4,6 +4,7 @@ import BackgroundTimer from 'react-native-background-timer'
 import { defaultUrl } from '@/config'
 // import { action as playerAction } from '@/store/modules/player'
 import settingState from '@/store/setting/state'
+import { log } from '@/utils/log'
 
 
 const list: LX.Player.Track[] = []
@@ -41,10 +42,28 @@ const getTrackSource = (musicInfo: LX.Player.PlayMusic) => {
   return 'progress' in musicInfo ? musicInfo.metadata.musicInfo.source : musicInfo.source
 }
 
+const biliMediaUrlRxp = /^https?:\/\/(?:[^/]+\.)?bilivideo\.com\//
+
 const getTrackHeaders = (musicInfo: LX.Player.PlayMusic, url?: string) => {
+  log.info('[Player] getTrackHeaders called, url:', url?.substring(0, 100))
   if (!url || !/^https?:\/\//.test(url) || wyMediaUrlRxp.test(url)) return undefined
   const source = getTrackSource(musicInfo)
-  return source === 'wy' ? wyStreamHeaders : undefined
+  log.info('[Player] getTrackHeaders source:', source)
+  if (source === 'wy') return wyStreamHeaders
+  if (source === 'bilibili') {
+    const id = 'progress' in musicInfo ? musicInfo.metadata.musicInfo.id : musicInfo.id
+    log.info('[Player] getTrackHeaders musicInfo.id:', id)
+    const bvidMatch = id?.match(/BV[a-zA-Z0-9]+/)
+    const bvid = bvidMatch ? bvidMatch[0] : ''
+    log.info('[Player] getTrackHeaders extracted bvid:', bvid)
+    const headers = {
+      Referer: `https://www.bilibili.com/video/${bvid}`,
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36 Edg/89.0.774.63',
+    }
+    log.info('[Player] getTrackHeaders returning headers:', headers)
+    return headers
+  }
+  return undefined
 }
 
 const getTrackUserAgent = (musicInfo: LX.Player.PlayMusic, url?: string) => {
@@ -55,21 +74,40 @@ const getTrackUserAgent = (musicInfo: LX.Player.PlayMusic, url?: string) => {
 
 const buildTrackExtra = (musicInfo: LX.Player.PlayMusic, url?: string) => {
   const headers = getTrackHeaders(musicInfo, url)
-  const userAgent = getTrackUserAgent(musicInfo, url)
-  return {
-    ...(userAgent != null ? { userAgent } : {}),
-    ...(headers ? { headers } : {}),
+  const source = getTrackSource(musicInfo)
+  const result: any = {}
+  
+  if (source === 'bilibili') {
+    // 对于 bilibili，我们同时设置 headers 和 userAgent
+    if (headers) {
+      result.headers = headers
+    }
+    result.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36 Edg/89.0.774.63'
+  } else {
+    if (headers) {
+      result.headers = headers
+    } else {
+      const userAgent = getTrackUserAgent(musicInfo, url)
+      if (userAgent != null) {
+        result.userAgent = userAgent
+      }
+    }
   }
+  
+  return result
 }
 
 const buildTracks = (musicInfo: LX.Player.PlayMusic, url?: LX.Player.Track['url'], duration?: LX.Player.Track['duration']): LX.Player.Track[] => {
+  log.info('[Player] buildTracks called, url:', url?.substring(0, 100))
   const mInfo = formatMusicInfo(musicInfo)
+  log.info('[Player] formatMusicInfo result:', JSON.stringify(mInfo).substring(0, 200))
   const track = [] as LX.Player.Track[]
   const album = mInfo.album || undefined
   const artwork = mInfo.pic && httpRxp.test(mInfo.pic) ? mInfo.pic : undefined
   const extra = typeof url === 'string' ? buildTrackExtra(musicInfo, url) : {}
+  log.info('[Player] buildTracks extra:', JSON.stringify(extra))
   if (url) {
-    track.push({
+    const trackItem = {
       id: `${mInfo.id}__//${Math.random()}__//${url}`,
       url,
       title: mInfo.name || 'Unknow',
@@ -80,7 +118,9 @@ const buildTracks = (musicInfo: LX.Player.PlayMusic, url?: LX.Player.Track['url'
       musicId: mInfo.id,
       // original: { ...musicInfo },
       duration,
-    })
+    }
+    log.info('[Player] trackItem created with headers:', !!trackItem.headers)
+    track.push(trackItem)
   }
   track.push({
     id: `${mInfo.id}__//${Math.random()}__//default`,
@@ -161,8 +201,10 @@ export const updateMetaData = async (musicInfo: LX.Player.MusicInfo, isPlay: boo
 
 export const initTrackInfo = async (musicInfo: LX.Player.PlayMusic, mInfo: LX.Player.MusicInfo) => {
   const tracks = buildTracks(musicInfo)
+  log.info('[Player] Adding tracks to player (initTrackInfo):', JSON.stringify(tracks[0], null, 2))
   await TrackPlayer.add(tracks).then(() => list.push(...tracks))
   const queue = await TrackPlayer.getQueue() as LX.Player.Track[]
+  log.info('[Player] Queue after add:', queue.length)
   await TrackPlayer.skip(queue.findIndex(t => t.id == tracks[0].id))
   delayUpdateMusicInfo(mInfo)
 }
@@ -172,10 +214,12 @@ const handlePlayMusic = async (musicInfo: LX.Player.PlayMusic, url: string, time
   // console.log(tracks, time)
   const tracks = buildTracks(musicInfo, url)
   const track = tracks[0]
+  log.info('[Player] Adding tracks to player (handlePlayMusic):', JSON.stringify(track, null, 2))
   // await updateMusicInfo(track)
   const currentTrackIndex = await TrackPlayer.getCurrentTrack()
   await TrackPlayer.add(tracks).then(() => list.push(...tracks))
   const queue = await TrackPlayer.getQueue() as LX.Player.Track[]
+  log.info('[Player] Queue after add:', queue.length)
   await TrackPlayer.skip(queue.findIndex(t => t.id == track.id))
 
   if (currentTrackIndex == null) {

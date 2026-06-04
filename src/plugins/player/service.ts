@@ -10,6 +10,7 @@ import { showDesktopLyric, hideDesktopLyric } from '@/core/desktopLyric'
 import { updateSetting } from '@/core/common'
 import settingState from '@/store/setting/state'
 import { onWidgetPlayPause, onWidgetPrev, onWidgetNext } from '@/utils/nativeModules/musicWidget'
+import { log } from '@/utils/log'
 
 let isInitialized = false
 
@@ -103,7 +104,31 @@ const registerPlaybackService = async () => {
   // })
 
   TrackPlayer.addEventListener(TPEvent.PlaybackError, async (err: any) => {
-    console.log('playback-error', err)
+    log.error('[Player] ====== Playback Error ======')
+    log.error('[Player] Error type:', typeof err)
+    log.error('[Player] Error:', JSON.stringify(err, null, 2))
+    
+    // 尝试获取当前播放的 track 信息
+    try {
+      const currentTrack = await TrackPlayer.getCurrentTrack()
+      if (currentTrack != null) {
+        const track = await TrackPlayer.getTrack(currentTrack)
+        log.error('[Player] Current track:', JSON.stringify(track, null, 2))
+        if (track?.url) log.error('[Player] Track URL:', track.url)
+        if (track?.headers) log.error('[Player] Track headers:', JSON.stringify(track.headers, null, 2))
+      }
+    } catch (e) {
+      log.error('[Player] Failed to get track info:', e)
+    }
+    
+    // 详细记录错误对象的所有属性
+    if (err) {
+      Object.keys(err).forEach(key => {
+        log.error(`[Player] Error.${key}:`, err[key])
+      })
+    }
+    
+    log.error('[Player] =============================')
     global.app_event.error()
     global.app_event.playerError()
   })
@@ -113,32 +138,45 @@ const registerPlaybackService = async () => {
   })
 
   TrackPlayer.addEventListener(TPEvent.PlaybackState, async (info) => {
+    log.info('[Player] PlaybackState changed:', JSON.stringify(info))
     if (global.lx.gettingUrlId || isTempId()) return
     // let currentIsPlaying = false
 
     switch (info.state) {
       case TPState.None:
-        // console.log('state', 'State.NONE')
+        log.info('[Player] State: None')
         break
       case TPState.Ready:
+        log.info('[Player] State: Ready')
+        global.app_event.playerPause()
+        global.app_event.pause()
+        break
       case TPState.Stopped:
+        log.info('[Player] State: Stopped')
+        global.app_event.playerPause()
+        global.app_event.pause()
+        break
       case TPState.Paused:
+        log.info('[Player] State: Paused')
         global.app_event.playerPause()
         global.app_event.pause()
         break
       case TPState.Playing:
+        log.info('[Player] State: Playing')
         global.app_event.playerPlaying()
         global.app_event.play()
         break
       case TPState.Buffering:
+        log.info('[Player] State: Buffering')
         global.app_event.pause()
         global.app_event.playerWaiting()
         break
       case TPState.Connecting:
+        log.info('[Player] State: Connecting')
         global.app_event.playerLoadstart()
         break
       default:
-        // console.log('playback-state', info)
+        log.info('[Player] State: Unknown', info.state)
         break
     }
     if (global.lx.isPlayedStop) return handleExitApp('Timeout Exit')

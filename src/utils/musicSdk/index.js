@@ -3,9 +3,15 @@ import kg from './kg'
 import tx from './tx'
 import wy from './wy'
 import mg from './mg'
+import bilibili from './bilibili'
 import git from './git'
 // import yt from './yt'
 import { supportQuality } from './api-source'
+import { log } from '@/utils/log'
+
+log.info('[MusicSdk] 模块初始化')
+log.info('[MusicSdk] bilibili: ' + (bilibili ? '存在' : '不存在'))
+log.info('[MusicSdk] bilibili.musicSearch: ' + (bilibili?.musicSearch ? '存在' : '不存在'))
 
 const sources = {
   sources: [
@@ -30,6 +36,10 @@ const sources = {
       id: 'mg',
     },
     {
+      name: '哔哩哔哩',
+      id: 'bilibili',
+    },
+    {
       name: 'Gitcode',
       id: 'git',
     },
@@ -43,13 +53,26 @@ const sources = {
   tx,
   wy,
   mg,
+  bilibili,
   git,
   // yt,
 }
-export default {
+
+log.info('[MusicSdk] sources对象创建完成')
+log.info('[MusicSdk] sources.bilibili: ' + (sources.bilibili ? '存在' : '不存在'))
+log.info('[MusicSdk] sources.bilibili.musicSearch: ' + (sources.bilibili?.musicSearch ? '存在' : '不存在'))
+
+const musicSdk = {
   ...sources,
   supportQuality,
 }
+
+log.info('[MusicSdk] musicSdk对象创建完成')
+log.info('[MusicSdk] musicSdk.bilibili: ' + (musicSdk.bilibili ? '存在' : '不存在'))
+log.info('[MusicSdk] musicSdk.bilibili.musicSearch: ' + (musicSdk.bilibili?.musicSearch ? '存在' : '不存在'))
+log.info('[MusicSdk] musicSdk keys: ' + Object.keys(musicSdk).join(', '))
+
+export default musicSdk
 
 export const init = () => {
   const tasks = []
@@ -142,7 +165,7 @@ export const findMusic = async (musicInfo) => {
         item.fMusicName = filterStr(String(item.name ?? '').toLowerCase())
         item.fAlbumName = filterStr(String(item.albumName ?? '').toLowerCase())
         item.fInterval = getIntv(item.interval)
-        // console.log(fMusicName, item.fMusicName, item.source)
+        // log.info(fMusicName, item.fMusicName, item.source)
         if (!isEqualsInterval(item.fInterval)) {
           item.name = null
           continue
@@ -202,6 +225,6 @@ export const findMusic = async (musicInfo) => {
     }
     newResult.push(...result)
   }
-  // console.log(newResult)
+  // log.info(newResult)
   return newResult
 }

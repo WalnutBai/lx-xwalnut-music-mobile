@@ -12,7 +12,7 @@ export default memo(() => {
   const theme = useTheme()
   const t = useI18n()
   const openHomePage = () => {
-    void openUrl('https://github.com/souvenp/lx-netease-music-mobile#readme')
+    void openUrl('https://github.com/WalnutBai/lx-n-music-mobile-pro#readme')
   }
 
   const textLinkStyle = {

@@ -18,7 +18,7 @@ const Content = () => {
   const theme = useTheme()
 
   const openHomePage = () => {
-    void openUrl('https://github.com/souvenp/lx-netease-music-mobile#readme')
+    void openUrl('https://github.com/WalnutBai/lx-n-music-mobile-pro#readme')
   }
   const openLicensePage = () => {
     void openUrl('http://www.apache.org/licenses/LICENSE-2.0')

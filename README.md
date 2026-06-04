@@ -3,24 +3,21 @@
 <h1 align="center">LX-N Music 移动版-改</h1>
 
 <p align="center">
-  <a href="https://github.com/souvenp/lx-netease-music-mobile/releases"><img src="https://img.shields.io/github/release/souvenp/lx-netease-music-mobile" alt="Release version"></a>
-  <a href="https://github.com/souvenp/lx-netease-music-mobile/actions/workflows/release.yml"><img src="https://github.com/souvenp/lx-netease-music-mobile/workflows/Build/badge.svg" alt="Build status"></a>
+  <a href="https://github.com/WalnutBai/lx-n-music-mobile-pro/releases"><img src="https://img.shields.io/github/release/souvenp/lx-netease-music-mobile" alt="Release version"></a>
+  <a href="https://github.com/WalnutBai/lx-n-music-mobile-pro/actions/workflows/release.yml"><img src="https://github.com/WalnutBai/lx-n-music-mobile-pro/workflows/Build/badge.svg" alt="Build status"></a>
   <a href="https://github.com/facebook/react-native"><img src="https://img.shields.io/github/package-json/dependency-version/souvenp/lx-netease-music-mobile/react-native/master" alt="React native version"></a>
 </p>
 
 <p align="center">一个基于 React Native 开发的音乐软件</p>
 
-这个库在 lx-music-mobile 和 ikun-music 基础上继续改造，个人自用，更新频率看个人更新频率。
-
-- https://github.com/lyswhut/lx-music-mobile
-- https://github.com/ikunshare/ikun-music-mobile
-- https://github.com/souvenp/lx-netease-music-mobile
+注:这是三方修改版 lx-netease-music-mobile 基础上继续改造，仅供个人自用
+官方地址:https://github.com/souvenp/lx-netease-music-mobile
 
 > **注意**: 涉及同步、备份未充分测试，请自行备份重要文件
 
 ---
 
-## 26.06.1
+## 26.06.4
 
 ###  新增
 
@@ -39,9 +36,11 @@
 - 底部播放栏背景样式同步设置修改
 - 日志界面上下滑动卡顿 BUG
 - 部分数据备份问题
+- 音源播放日志
 
 ###  修复
 
-- 我的歌单中音乐列表的背景样式 bug
+- 部分音质无法向下兼容导致部分播放失败的BUG
+- 我的歌单中音乐列表的背景样式 BUG
 - 我中音乐列表的背景样式不同步设置修改的 BUG
 - 每日推荐中推荐歌单背景样式不同步设置修改的 BUG

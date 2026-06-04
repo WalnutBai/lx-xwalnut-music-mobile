@@ -26,7 +26,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/souvenp/lx-netease-music-mobile.git"
+    "url": "git+https://github.com/WalnutBai/lx-n-music-mobile-pro.git"
   },
   "keywords": [
     "music-player",
@@ -38,9 +38,9 @@
   },
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/souvenp/lx-netease-music-mobile/issues"
+    "url": "https://github.com/WalnutBai/lx-n-music-mobile-pro/issues"
   },
-  "homepage": "https://github.com/souvenp/lx-netease-music-mobile#readme",
+  "homepage": "https://github.com/WalnutBai/lx-n-music-mobile-pro#readme",
   "dependencies": {
     "@craftzdog/react-native-buffer": "^6.0.5",
     "@d11/react-native-fast-image": "^8.13.0",

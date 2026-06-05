@@ -123,6 +123,8 @@ declare global {
 
       'theme.customBgPicPath': string
 
+      'theme.sectionOpacity': number
+
       /**
        * 字体阴影
        */

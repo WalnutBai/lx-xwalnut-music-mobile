@@ -147,6 +147,7 @@ const defaultSetting: LX.AppSetting = {
   'theme.fontShadow': false,
   'theme.customBgPicPath': '',
   'theme.picOpacity': 76,
+  'theme.sectionOpacity': 50,
 }
 
 // 使用新年皮肤

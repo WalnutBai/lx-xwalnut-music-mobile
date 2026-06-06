@@ -4,6 +4,7 @@ import {
   getUserApiScript,
   removeUserApi as removeUserApiFromStore,
   setUserApiAllowShowUpdateAlert as setUserApiAllowShowUpdateAlertFromStore,
+  setUserApiList as setUserApiListFromStore,
 } from '@/utils/data'
 import { destroy, loadScript } from '@/utils/nativeModules/userApi'
 import { log as writeLog } from '@/utils/log'
@@ -45,6 +46,11 @@ export const removeUserApi = async (ids: string[]) => {
 export const setUserApiAllowShowUpdateAlert = async (id: string, enable: boolean) => {
   await setUserApiAllowShowUpdateAlertFromStore(id, enable)
   action.setUserApiAllowShowUpdateAlert(id, enable)
+}
+
+export const reorderUserApi = async (list: LX.UserApi.UserApiInfo[]) => {
+  const persisted = await setUserApiListFromStore(list)
+  action.setUserApiList(persisted)
 }
 
 export const overwriteUserApis = async (data: { list: LX.UserApi.UserApiInfo[], scripts: Record<string, string> }) => {

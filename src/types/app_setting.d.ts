@@ -247,7 +247,17 @@ declare global {
        */
       'playDetail.style.align': 'center' | 'left' | 'right'
 
+      /**
+       * 播放详情页-迷你歌词对齐方式
+       */
+      'playDetail.style.miniLyricAlign': 'center' | 'left' | 'right'
+
       'playDetail.isCoverSpin': boolean
+
+      /**
+       * 播放详情页-封面大小
+       */
+      'playDetail.style.coverSize': number
       /**
        * 竖屏歌词字体大小
        */

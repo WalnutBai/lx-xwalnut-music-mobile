@@ -13,7 +13,7 @@ const MiniLyric = ({ onPress, style }: { onPress?: () => void, style?: any }) =>
   const theme = useTheme();
   const { line: activeLine } = useLrcPlay();
   const lyricLines = useLrcSet();
-  const textAlign = useSettingValue('playDetail.style.align');
+  const textAlign = useSettingValue('playDetail.style.miniLyricAlign');
   const lrcFontSize = useSettingValue('playDetail.vertical.style.lrcFontSize');
 
   const { currentLine, translationLine } = useMemo(() => {
@@ -31,6 +31,7 @@ const MiniLyric = ({ onPress, style }: { onPress?: () => void, style?: any }) =>
   const lineHeight = setSpText(size) * 1.3;
 
   const activeColor = theme.isDark ? theme['c-font'] : theme['c-primary'];
+
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={[styles.container, style]}>
       {currentLine ? (
@@ -66,8 +67,9 @@ const MiniLyric = ({ onPress, style }: { onPress?: () => void, style?: any }) =>
 const styles = createStyle({
   container: {
     paddingVertical: 10,
-    alignItems: 'flex-start',
-    width: '100%',
+    paddingLeft: 20,
+    paddingRight: 20,
+    alignItems: 'stretch',
   },
 });
 

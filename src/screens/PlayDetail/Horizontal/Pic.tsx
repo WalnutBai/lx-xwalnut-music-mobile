@@ -18,6 +18,7 @@ export default memo(({ componentId }: { componentId: string }) => {
   const statusBarHeight = useStatusbarHeight();
   const isPlay = useIsPlay();
   const isCoverSpin = useSettingValue('playDetail.isCoverSpin');
+  const coverSize = useSettingValue('playDetail.style.coverSize');
   const spinValue = useRef(new Animated.Value(0)).current;
   const animationRef = useRef<Animated.CompositeAnimation | null>(null);
   const isAnimating = useRef(false);
@@ -85,25 +86,29 @@ export default memo(({ componentId }: { componentId: string }) => {
   });
 
   const imageContainerStyle = useMemo(() => {
-    let imgWidth = Math.min(
+    let baseWidth = Math.min(
       (winWidth * 0.45 - marginLeft - BTN_WIDTH) * 0.76,
       (winHeight - statusBarHeight - HEADER_HEIGHT) * 0.62,
     );
-    imgWidth -= imgWidth * (global.lx.fontSize - 1) * 0.3;
+    baseWidth -= baseWidth * (global.lx.fontSize - 1) * 0.3;
+    const imgWidth = baseWidth * (coverSize / 100);
+    const radius = isCoverSpin ? imgWidth / 2 : 4;
     return {
       width: imgWidth,
       height: imgWidth,
-      borderRadius: isCoverSpin ? imgWidth / 2 : 4,
+      borderRadius: radius,
       elevation: 3,
-      opacity: 1, // 直接设置为1，让动画引擎控制可见性
+      opacity: 1,
+      backgroundColor: 'transparent',
+      overflow: 'hidden',
     };
-  }, [winWidth, winHeight, statusBarHeight, isCoverSpin]);
+  }, [winWidth, winHeight, statusBarHeight, isCoverSpin, coverSize]);
 
   const imageStyle = useMemo(() => ({
     width: '100%',
     height: '100%',
     borderRadius: imageContainerStyle.borderRadius,
-  }), [imageContainerStyle.borderRadius]);
+  } as any), [imageContainerStyle.borderRadius]);
 
   let contentHeight = (winHeight - statusBarHeight - HEADER_HEIGHT) * 0.66;
   contentHeight -= contentHeight * (global.lx.fontSize - 1) * 0.2;
@@ -111,7 +116,7 @@ export default memo(({ componentId }: { componentId: string }) => {
   return (
     <View style={{ ...styles.container, height: contentHeight }}>
       <View style={[styles.content, imageContainerStyle, { overflow: 'hidden' }]}>
-        <Animated.View style={{ width: '100%', height: '100%', transform: [{ rotate: spin }] }}>
+        <Animated.View style={{ position: 'absolute', top: '-21%', left: '-21%', width: '142%', height: '142%', transform: [{ rotate: spin }] }}>
           <Image
             url={musicInfo.pic} // 直接使用 store 中的数据
             nativeID={NAV_SHEAR_NATIVE_IDS.playDetail_pic}

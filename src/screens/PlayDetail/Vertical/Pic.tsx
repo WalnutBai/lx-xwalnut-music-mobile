@@ -21,6 +21,7 @@ export default memo(({ componentId }: { componentId: string }) => {
   const statusBarHeight = useStatusbarHeight();
   const isPlay = useIsPlay();
   const isCoverSpin = useSettingValue('playDetail.isCoverSpin');
+  const coverSize = useSettingValue('playDetail.style.coverSize');
   const spinValue = useRef(new Animated.Value(0)).current;
   const animationRef = useRef<Animated.CompositeAnimation | null>(null);
   const isAnimating = useRef(false);
@@ -97,24 +98,34 @@ export default memo(({ componentId }: { componentId: string }) => {
   });
 
   const imageContainerStyle = useMemo(() => {
-    const imgWidth = Math.min(winWidth * 0.85, (winHeight - statusBarHeight - HEADER_HEIGHT) * 0.5);
+    const baseWidth = Math.min(winWidth * 0.85, (winHeight - statusBarHeight - HEADER_HEIGHT) * 0.5);
+    const imgWidth = baseWidth * (coverSize / 100);
+    const radius = isCoverSpin ? imgWidth / 2 : 4;
     return {
       width: imgWidth,
       height: imgWidth,
-      borderRadius: isCoverSpin ? imgWidth / 2 : 4,
+      borderRadius: radius,
       elevation: 3,
       opacity: 1,
+      backgroundColor: 'transparent',
+      overflow: 'hidden',
     };
-  }, [statusBarHeight, winHeight, winWidth, isCoverSpin]);
+  }, [statusBarHeight, winHeight, winWidth, isCoverSpin, coverSize]);
 
   const imageStyle = useMemo(() => ({
     width: '100%',
     height: '100%',
-  } as const), []);
+    borderRadius: imageContainerStyle.borderRadius,
+  } as any), [imageContainerStyle.borderRadius]);
 
+  // 旋转时让 Animated.View 尺寸大于容器，避免旋转后变成菱形超出边界
+  // 对角线 = 边长 × √2 ≈ 边长 × 1.42，所以放大 1.42 倍可让旋转时始终覆盖容器
   const animatedCoverStyle = useMemo(() => ({
-    width: '100%',
-    height: '100%',
+    position: 'absolute' as const,
+    top: '-21%',
+    left: '-21%',
+    width: '142%',
+    height: '142%',
     backfaceVisibility: 'hidden' as const,
     transform: [{ rotate: spin }],
   } as any), [spin]);

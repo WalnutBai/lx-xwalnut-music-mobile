@@ -97,6 +97,8 @@ const defaultSetting: LX.AppSetting = {
 
   'playDetail.isCoverSpin': true,
   'playDetail.style.align': 'center',
+  'playDetail.style.miniLyricAlign': 'center',
+  'playDetail.style.coverSize': 100,
   'playDetail.vertical.style.lrcFontSize': 200,
   'playDetail.horizontal.style.lrcFontSize': 220,
   'playDetail.isShowLyricProgressSetting': true,

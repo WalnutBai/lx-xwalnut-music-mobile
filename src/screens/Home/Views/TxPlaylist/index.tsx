@@ -9,9 +9,12 @@ import txUserApi from '@/utils/musicSdk/tx/user'
 import { useI18n } from '@/lang'
 import { useTheme } from '@/store/theme/hook'
 import Text from '@/components/common/Text'
-import { toast } from '@/utils/tools'
+import { toast, confirmDialog } from '@/utils/tools'
 import SonglistDetail from '../../../SonglistDetail'
 import commonState from '@/store/common/state'
+import Menu, { type MenuType, type Position } from '@/components/common/Menu'
+import ConfirmAlert, { type ConfirmAlertType } from '@/components/common/ConfirmAlert'
+import Input from '@/components/common/Input'
 
 interface PlaylistInfo {
   id: string
@@ -21,6 +24,7 @@ interface PlaylistInfo {
   desc: string
   isFavorites?: boolean
   isCollected?: boolean
+  dirid?: number
 }
 
 type TabType = 'created' | 'collected'
@@ -37,11 +41,36 @@ export default memo(() => {
   const selectedPlaylistRef = useRef(selectedPlaylist)
   selectedPlaylistRef.current = selectedPlaylist
 
+  const [menuVisible, setMenuVisible] = useState(false)
+  const menuRef = useRef<MenuType>(null)
+  const selectedItemRef = useRef<PlaylistInfo | null>(null)
+
+  const [createModalVisible, setCreateModalVisible] = useState(false)
+  const createModalRef = useRef<ConfirmAlertType>(null)
+  const [newPlaylistName, setNewPlaylistName] = useState('')
+
   const playlists = activeTab === 'created' ? createdPlaylists : collectedPlaylists
 
   const fetchCreatedPlaylists = useCallback(async (isRefresh = false) => {
     try {
       const lists = await txUserApi.getCreatedPlaylists()
+      
+      const favoritesPlaylist = lists.find((p: PlaylistInfo) => p.isFavorites)
+      if (favoritesPlaylist && favoritesPlaylist.songCount > 0) {
+        try {
+          const favSongs = await txUserApi.getFavSongs(1, 1)
+          if (favSongs.list && favSongs.list.length > 0) {
+            const firstSong = favSongs.list[0]
+            const coverUrl = firstSong.albumMid 
+              ? `https://y.gtimg.cn/music/photo_new/T002R800x800M000${firstSong.albumMid}.jpg`
+              : favoritesPlaylist.cover
+            favoritesPlaylist.cover = coverUrl
+          }
+        } catch (err) {
+          console.warn('获取"我喜欢"歌单详情失败:', err)
+        }
+      }
+      
       setCreatedPlaylists(lists)
     } catch (err: any) {
       console.error('获取自建歌单失败:', err)
@@ -125,15 +154,79 @@ export default memo(() => {
     setSelectedPlaylist(null)
   }, [])
 
+  const handleMenuPress = useCallback((item: PlaylistInfo, position: Position) => {
+    selectedItemRef.current = item
+    setMenuVisible(true)
+    requestAnimationFrame(() => {
+      menuRef.current?.show(position)
+    })
+  }, [])
+
+  const handleMenuAction = useCallback(({ action }: { action: string }) => {
+    setMenuVisible(false)
+    const item = selectedItemRef.current
+    if (!item) return
+
+    switch (action) {
+      case 'create':
+        setNewPlaylistName('')
+        setCreateModalVisible(true)
+        requestAnimationFrame(() => {
+          createModalRef.current?.setVisible(true)
+        })
+        break
+      case 'delete':
+        confirmDialog({
+          message: `确定要删除歌单"${item.name}"吗？`,
+          confirmButtonText: '删除',
+        }).then(async (confirmed) => {
+          if (!confirmed) return
+          if (!item.dirid) {
+            toast('无法获取歌单信息')
+            return
+          }
+          try {
+            await txUserApi.deletePlaylist(item.dirid)
+            toast('删除成功')
+            await fetchPlaylists(true)
+          } catch (err: any) {
+            toast(`删除失败: ${err.message}`)
+          }
+        })
+        break
+    }
+  }, [fetchPlaylists])
+
+  const handleCreatePlaylist = useCallback(async () => {
+    const name = newPlaylistName.trim()
+    if (!name) {
+      toast('歌单名不能为空')
+      return
+    }
+
+    try {
+      await txUserApi.createPlaylist(name)
+      toast('创建成功')
+      setNewPlaylistName('')
+      createModalRef.current?.setVisible(false)
+      await fetchPlaylists(true)
+    } catch (err: any) {
+      toast(`创建失败: ${err.message}`)
+    }
+  }, [newPlaylistName, fetchPlaylists])
+
   const renderTab = useCallback((tab: TabType, label: string) => {
     const isActive = activeTab === tab
     return (
       <TouchableOpacity
         key={tab}
-        style={[styles.tabItem, isActive && { borderBottomColor: theme['c-primary'] }]}
+        style={styles.tabItem}
         onPress={() => setActiveTab(tab)}
       >
-        <Text style={[styles.tabText, isActive && { color: theme['c-primary'] }]}>
+        <Text
+          style={[styles.tabText, { borderBottomColor: isActive ? theme['c-primary-font-active'] : 'transparent' }]}
+          color={isActive ? theme['c-primary-font'] : theme['c-font']}
+        >
           {label}
         </Text>
       </TouchableOpacity>
@@ -143,23 +236,23 @@ export default memo(() => {
   return (
     <View style={{ flex: 1 }}>
       <View
-        style={[{ flex: 1 }, selectedPlaylist ? { opacity: 0 } : null]}
+        style={[{ flex: 1, overflow: 'hidden' }, selectedPlaylist ? { opacity: 0 } : null]}
         pointerEvents={selectedPlaylist ? 'none' : 'auto'}
       >
-        {/* 标签栏 */}
         <View style={[styles.tabBar, { borderBottomColor: theme['c-border-background'] }]}>
           {renderTab('created', `自建歌单 (${createdPlaylists.length})`)}
           {renderTab('collected', `收藏歌单 (${collectedPlaylists.length})`)}
         </View>
 
-        {/* 歌单列表 */}
         <FlatList
           onScrollBeginDrag={Keyboard.dismiss}
           data={playlists}
           renderItem={({ item }) => (
-            <ListItem item={item} onPress={handleItemPress} />
+            <ListItem item={item} onPress={handleItemPress} onMenuPress={handleMenuPress} />
           )}
           keyExtractor={item => `${item.id}-${item.isCollected ? 'collected' : 'created'}`}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingRight: 0 }}
           refreshControl={
             <RefreshControl
               colors={[theme['c-primary']]}
@@ -183,6 +276,29 @@ export default memo(() => {
           <SonglistDetail info={selectedPlaylist} onBack={handleBack} />
         </View>
       )}
+      {menuVisible && (
+        <Menu
+          ref={menuRef}
+          menus={[{ action: 'create', label: '新建歌单' }, { action: 'delete', label: '删除歌单' }]}
+          onPress={handleMenuAction}
+          onHide={() => setMenuVisible(false)}
+        />
+      )}
+      {createModalVisible && (
+        <ConfirmAlert
+          ref={createModalRef}
+          onConfirm={handleCreatePlaylist}
+          onHide={() => setCreateModalVisible(false)}
+          title="新建歌单"
+        >
+          <Input
+            value={newPlaylistName}
+            onChangeText={setNewPlaylistName}
+            placeholder="请输入歌单名称"
+            style={{ backgroundColor: theme['c-primary-input-background'] }}
+          />
+        </ConfirmAlert>
+      )}
     </View>
   )
 })
@@ -194,14 +310,12 @@ const styles = StyleSheet.create({
   },
   tabItem: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 3,
     alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
   },
   tabText: {
-    fontSize: 14,
-    fontWeight: '500',
+    paddingBottom: 3,
+    borderBottomWidth: 2,
   },
   emptyContainer: {
     flex: 1,

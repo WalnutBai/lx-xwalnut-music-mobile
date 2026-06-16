@@ -72,7 +72,7 @@ export default memo(({ componentId, item, width, viewMode }: { componentId: stri
         <View style={listStyles.info}>
           <Text style={listStyles.name} numberOfLines={1}>{item.name}</Text>
           <Text style={listStyles.time} size={12} color={theme['c-font-label']}>
-            {item.size} tracks
+            {item.size} 首
           </Text>
         </View>
         <TouchableOpacity style={listStyles.likeButton} onPress={toggleSubscribe}>
@@ -90,7 +90,7 @@ export default memo(({ componentId, item, width, viewMode }: { componentId: stri
       <View style={gridStyles.metaContainer}>
         <View style={gridStyles.metaTextContainer}>
           <Text style={gridStyles.time} size={10} color={theme['c-font-label']}>
-            {item.size} tracks
+            {item.size} 首
           </Text>
         </View>
         <TouchableOpacity style={gridStyles.likeButton} onPress={toggleSubscribe}>

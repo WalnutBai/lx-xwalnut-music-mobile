@@ -10,7 +10,7 @@ import { updateSetting } from '@/core/common'
 import { useWySubscribedPlaylists, useWyUid } from '@/store/user/hook.ts'
 import userState from '@/store/user/state'
 import { useSettingValue } from '@/store/setting/hook'
-import { toast } from '@/utils/tools'
+import { toast, confirmDialog } from '@/utils/tools'
 import { useTheme } from '@/store/theme/hook'
 import Text from '@/components/common/Text'
 import SonglistDetail from '../../../SonglistDetail'
@@ -19,7 +19,9 @@ import commonState from '@/store/common/state'
 import playerState from '@/store/player/state'
 import { LIST_IDS } from '@/config/constant'
 import listState from '@/store/list/state'
-import {setWySubscribedPlaylists} from "@/store/user/action.ts"
+import {setWySubscribedPlaylists, removeWySubscribedPlaylist, updateWySubscribedPlaylist} from "@/store/user/action.ts"
+import Menu, { type MenuType, type Position } from '@/components/common/Menu'
+import PlaylistEditModal, { type PlaylistEditModalType } from './PlaylistEditModal'
 import MusicInfoOnline = LX.Music.MusicInfoOnline;
 
 export default memo(() => {
@@ -32,6 +34,11 @@ export default memo(() => {
   const [scrollToMusicInfo, setScrollToMusicInfo] = useState<MusicInfoOnline | null>(null)
   const selectedPlaylistRef = useRef(selectedPlaylist)
   selectedPlaylistRef.current = selectedPlaylist
+
+  const [menuVisible, setMenuVisible] = useState(false)
+  const menuRef = useRef<MenuType>(null)
+  const selectedItemRef = useRef<any>(null)
+  const playlistEditModalRef = useRef<PlaylistEditModalType>(null)
 
   useEffect(() => {
     const handleJumpPosition = () => {
@@ -175,6 +182,45 @@ export default memo(() => {
     }
   }, [cookie, uid])
 
+  const handleMenuPress = useCallback((item: any, position: Position) => {
+    selectedItemRef.current = item
+    setMenuVisible(true)
+    requestAnimationFrame(() => {
+      menuRef.current?.show(position)
+    })
+  }, [])
+
+  const handleMenuAction = useCallback(({ action }: { action: string }) => {
+    setMenuVisible(false)
+    const item = selectedItemRef.current
+    if (!item) return
+
+    switch (action) {
+      case 'edit':
+        playlistEditModalRef.current?.show({
+          id: String(item.id),
+          name: item.name,
+          desc: item.description || '',
+        })
+        break
+      case 'delete':
+        confirmDialog({
+          message: `确定要删除歌单"${item.name}"吗？`,
+          confirmButtonText: '删除',
+        }).then(async (confirmed) => {
+          if (!confirmed) return
+          try {
+            await wyApi.deletePlaylist(item.id)
+            toast('删除成功')
+            removeWySubscribedPlaylist(item.id)
+          } catch (err: any) {
+            toast(`删除失败: ${err.message}`)
+          }
+        })
+        break
+    }
+  }, [])
+
   if (!cookie) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -193,7 +239,7 @@ export default memo(() => {
         <FlatList
           onScrollBeginDrag={Keyboard.dismiss}
           data={playlists}
-          renderItem={({ item }) => <ListItem item={item} onPress={handleItemPress} onHeartbeatPress={handleHeartbeatPress} />}
+          renderItem={({ item }) => <ListItem item={item} onPress={handleItemPress} onHeartbeatPress={handleHeartbeatPress} onMenuPress={handleMenuPress} />}
           keyExtractor={item => String(item.id)}
           refreshControl={
             <RefreshControl
@@ -209,6 +255,15 @@ export default memo(() => {
           <SonglistDetail info={selectedPlaylist} onBack={handleBack} initialScrollToInfo={scrollToMusicInfo} />
         </View>
       )}
+      {menuVisible && (
+        <Menu
+          ref={menuRef}
+          menus={[{ action: 'edit', label: '编辑' }, { action: 'delete', label: '删除' }]}
+          onPress={handleMenuAction}
+          onHide={() => setMenuVisible(false)}
+        />
+      )}
+      <PlaylistEditModal ref={playlistEditModalRef} />
     </View>
   )
 })

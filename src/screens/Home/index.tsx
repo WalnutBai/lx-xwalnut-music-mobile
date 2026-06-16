@@ -16,6 +16,7 @@ import {useBackHandler} from "@/utils/hooks/useBackHandler.ts";
 
 import { setSearchText as setSearchState } from '@/core/search/search'
 import WebLoginManager from "@/components/WebLoginManager.tsx";
+import QQWebLoginManager from "@/components/QQWebLoginManager.tsx";
 import DownloadBall from "@/components/DownloadBall";
 import YouTubeLoginManager from "@/components/YouTubeLoginManager.tsx";
 import VideoPlayerManager from "@/components/VideoPlayerManager.tsx";
@@ -80,6 +81,7 @@ export default ({ componentId }: Props) => {
       <PageContent>{isHorizontalMode ? <Horizontal componentId={componentId} /> : <Vertical componentId={componentId} />}</PageContent>
       <ArtistSelectorManager />
       <WebLoginManager />
+      <QQWebLoginManager />
       {/*<YouTubeLoginManager />*/}
       <VideoPlayerManager />
       <DownloadBall />

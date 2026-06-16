@@ -148,7 +148,11 @@ const artistApi = {
       
       const artistName = baseInfo.Name || singerInfo.name || data.singer_name || ''
       const artistPicUrl = baseInfo.Avatar || singerInfo.pic || data.singer_pic || ''
-      const artistDesc = baseInfo.Desc || data.singer_desc || ''
+      let artistDesc = baseInfo.Desc || data.singer_desc || ''
+      
+      if (!artistDesc) {
+        artistDesc = await this.getSingerDesc(artistMid).catch(() => '')
+      }
       
       let formattedPicUrl = ''
       if (artistPicUrl) {
@@ -596,6 +600,88 @@ const artistApi = {
       publishTime: item.publishDate || item.time_public || '',
       source: 'tx',
     }))
+  },
+
+  getSingerDesc(artistMid, retryNum = 0) {
+    if (retryNum > 2) {
+      txLog.warn('=== getSingerDesc 重试次数超限 ===', { artistMid, retryNum })
+      return Promise.resolve('')
+    }
+    txLog.info('=== getSingerDesc 开始 ===', { artistMid, retryNum })
+    const request = signRequest({
+      comm: {
+        ct: '11',
+        cv: '14090508',
+        v: '14090508',
+        tmeAppID: 'qqmusic',
+        phonetype: 'EBG-AN10',
+        deviceScore: '553.47',
+        devicelevel: '50',
+        newdevicelevel: '20',
+        rom: 'HuaWei/EMOTION/EmotionUI_14.2.0',
+        os_ver: '12',
+        OpenUDID: '0',
+        OpenUDID2: '0',
+        QIMEI36: '0',
+        udid: '0',
+        chid: '0',
+        aid: '0',
+        oaid: '0',
+        taid: '0',
+        tid: '0',
+        wid: '0',
+        uid: '0',
+        sid: '0',
+        modeSwitch: '6',
+        teenMode: '0',
+        ui_mode: '2',
+        nettype: '1020',
+        v4ip: '',
+      },
+      req: {
+        module: 'music.musichallSinger.SingerInfoInter',
+        method: 'GetSingerDetail',
+        param: {
+          singer_mids: [artistMid],
+          groups: 1,
+          wikis: 1,
+        },
+      },
+    })
+    return request.then(({ body }) => {
+      const bodyCode = body?.code
+      const reqCode = body?.req?.code
+      
+      if (!body || !body.req || bodyCode != this.successCode || reqCode != this.successCode) {
+        txLog.warn('=== getSingerDesc 获取失败 ===', {
+          artistMid,
+          bodyCode,
+          reqCode,
+          retryNum: retryNum + 1,
+        })
+        return this.getSingerDesc(artistMid, ++retryNum)
+      }
+      const singerList = body.req.data?.singerlist || body.req.data?.singer_list || []
+      let desc = ''
+      if (singerList.length > 0) {
+        const singer = singerList[0]
+        desc = singer.wiki_content || singer.wiki || singer.ex_info?.desc || singer.exInfo?.desc || singer.desc || ''
+      }
+      txLog.info('=== getSingerDesc 获取成功 ===', {
+        artistMid,
+        desc: desc.slice(0, 50),
+        hasSingerList: singerList.length > 0,
+      })
+      return desc
+    }).catch(err => {
+      txLog.error('=== getSingerDesc 出错 ===', {
+        artistMid,
+        error: err.message,
+        stack: err.stack,
+        retryNum: retryNum + 1,
+      })
+      return this.getSingerDesc(artistMid, ++retryNum)
+    })
   },
 
   getAlbumSongCount(albumMid, retryNum = 0) {

@@ -1,12 +1,8 @@
-/**
- * QQ音乐Cookie设置页面
- */
-
 import { useSettingValue } from '@/store/setting/hook';
 import { updateSetting } from '@/core/common';
 import InputItem from '../../components/InputItem';
 import { createStyle, toast } from '@/utils/tools';
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useEffect } from 'react';
 import { View } from 'react-native';
 import { useI18n } from '@/lang';
 
@@ -16,7 +12,6 @@ export default memo(() => {
 
   const handleTxCookieChanged = useCallback(
     (text: string) => {
-      // QQ音乐Cookie只需要保存，不需要同步到原生层
       updateSetting({ 'common.tx_cookie': text });
       if (text && text.length > 50) {
         toast(t('setting_basic_tx_cookie') + ' ' + t('saved'));
@@ -24,6 +19,17 @@ export default memo(() => {
     },
     [t],
   );
+
+  useEffect(() => {
+    const handleCookieSet = (cookie: string) => {
+      updateSetting({ 'common.tx_cookie': cookie });
+    };
+
+    global.app_event.on('tx-cookie-set', handleCookieSet);
+    return () => {
+      global.app_event.off('tx-cookie-set', handleCookieSet);
+    };
+  }, []);
 
   return (
     <View style={styles.content}>

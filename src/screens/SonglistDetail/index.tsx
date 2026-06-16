@@ -7,7 +7,7 @@ import ActionBar from './ActionBar'
 import Image from '@/components/common/Image'
 import Text from '@/components/common/Text'
 import { NAV_SHEAR_NATIVE_IDS } from '@/config/constant'
-import { confirmDialog, createStyle, toast } from '@/utils/tools'
+import { createStyle, toast } from '@/utils/tools'
 import { scaleSizeW } from '@/utils/pixelRatio'
 import { useTheme } from '@/store/theme/hook'
 import { BorderWidths } from '@/theme'
@@ -16,11 +16,8 @@ import commonState from '@/store/common/state'
 import { Icon } from '@/components/common/Icon'
 import { useIsWyPlaylistSubscribed, useWySubscribedPlaylists, useWyUid } from '@/store/user/hook'
 import wyApi from '@/utils/musicSdk/wy/user'
-import txUserApi from '@/utils/musicSdk/tx/user'
 import { addWySubscribedPlaylist, removeWySubscribedPlaylist } from '@/store/user/action'
 import { COMPONENT_IDS } from '@/config/constant'
-import Menu, { type MenuType } from '@/components/common/Menu'
-import PlaylistEditModal, { type PlaylistEditModalType } from '../Home/Views/MyPlaylist/PlaylistEditModal'
 import { type DetailInfo } from "@/screens/SonglistDetail/Header.tsx"
 import playerState from '@/store/player/state'
 import { LIST_IDS } from '@/config/constant'
@@ -34,44 +31,12 @@ const ListHeader = ({ detailInfo, info, onBack }: { detailInfo: DetailInfo, info
   const theme = useTheme()
   const loggedInUserId = useWyUid()
   const isSubscribed = useIsWyPlaylistSubscribed(info.id)
-  const moreBtnRef = useRef<TouchableOpacity>(null)
-  const menuRef = useRef<MenuType>(null)
-  const playlistEditModalRef = useRef<PlaylistEditModalType>(null)
-  const [isMenuVisible, setMenuVisible] = useState(false)
-  const [txPlaylistInfo, setTxPlaylistInfo] = useState<{ dirid: number; isUserCreated: boolean } | null>(null)
 
-  // 网易云：判断是否是创建者
   const isWyCreator = useMemo(() => {
     return info.source === 'wy' &&
       detailInfo.userId &&
       String(detailInfo.userId) === String(loggedInUserId)
   }, [info.source, detailInfo.userId, loggedInUserId])
-
-  // QQ音乐：判断是否是用户自建歌单（非收藏歌单）
-  useEffect(() => {
-    if (info.source === 'tx') {
-      txUserApi.getUserPlaylists().then(playlists => {
-        const targetPlaylist = playlists.find((p: any) => String(p.id) === String(info.id))
-        if (targetPlaylist && !targetPlaylist.isCollected) {
-          setTxPlaylistInfo({
-            dirid: targetPlaylist.dirid,
-            isUserCreated: true,
-          })
-        } else {
-          setTxPlaylistInfo(null)
-        }
-      }).catch(() => {
-        setTxPlaylistInfo(null)
-      })
-    } else {
-      setTxPlaylistInfo(null)
-    }
-  }, [info.source, info.id])
-
-  // 是否显示三点菜单
-  const showMoreButton = useMemo(() => {
-    return isWyCreator || (txPlaylistInfo?.isUserCreated && txPlaylistInfo.dirid !== 201)
-  }, [isWyCreator, txPlaylistInfo])
 
   const showSubscribeButton = useMemo(() => {
     return info.source === 'wy' && !isWyCreator
@@ -96,72 +61,6 @@ const ListHeader = ({ detailInfo, info, onBack }: { detailInfo: DetailInfo, info
       toast(`操作失败: ${err.message}`)
     })
   }, [isSubscribed, info, detailInfo])
-
-  const showMenu = () => {
-    moreBtnRef.current?.measure((fx, fy, width, height, px, py) => {
-      const position = { x: Math.ceil(px), y: Math.ceil(py), w: Math.ceil(width), h: Math.ceil(height) }
-      setMenuVisible(true)
-      requestAnimationFrame(() => {
-        menuRef.current?.show(position)
-      })
-    })
-  }
-
-  const handleMenuPress = ({ action }: { action: 'edit' | 'delete' }) => {
-    setMenuVisible(false)
-    switch (action) {
-      case 'edit':
-        // QQ音乐暂不支持编辑
-        if (info.source === 'wy') {
-          playlistEditModalRef.current?.show({
-            id: String(info.id),
-            name: detailInfo.name,
-            desc: detailInfo.desc,
-          })
-        }
-        break
-      case 'delete':
-        confirmDialog({
-          message: `确定要删除歌单"${detailInfo.name}"吗？`,
-          confirmButtonText: '删除',
-        }).then(confirm => {
-          if (!confirm) return
-          
-          if (info.source === 'wy') {
-            // 网易云删除歌单
-            wyApi.deletePlaylist(info.id).then(() => {
-              toast('删除成功')
-              removeWySubscribedPlaylist(info.id)
-              onBack()
-            }).catch(err => {
-              toast(`删除失败: ${err.message}`)
-            })
-          } else if (info.source === 'tx' && txPlaylistInfo) {
-            // QQ音乐删除歌单
-            txUserApi.deletePlaylist(txPlaylistInfo.dirid).then(() => {
-              toast('删除成功')
-              // 触发歌单更新事件
-              global.app_event.emit('playlist_updated', { source: 'tx', listId: String(info.id) })
-              onBack()
-            }).catch(err => {
-              toast(`删除失败: ${err.message}`)
-            })
-          }
-        })
-        break
-    }
-  }
-
-  // 构建菜单项
-  const menuItems = useMemo(() => {
-    if (info.source === 'wy') {
-      return [{ action: 'edit', label: '编辑' }, { action: 'delete', label: '删除' }]
-    } else if (info.source === 'tx') {
-      // QQ音乐只有删除功能
-      return [{ action: 'delete', label: '删除歌单' }]
-    }
-    return []
-  }, [info.source])
 
   return (
     <>
@@ -192,25 +91,11 @@ const ListHeader = ({ detailInfo, info, onBack }: { detailInfo: DetailInfo, info
                   <Icon name={isSubscribed ? 'love-filled' : 'love'} color={isSubscribed ? theme['c-liked'] : theme['c-font-label']} size={20} />
                 </TouchableOpacity>
               )}
-              {showMoreButton && (
-                <TouchableOpacity ref={moreBtnRef} style={styles.subscribeButton} onPress={showMenu}>
-                  <Icon name="dots-vertical" color={theme['c-font-label']} size={20} />
-                </TouchableOpacity>
-              )}
             </View>
           </View>
         </View>
         <ActionBar onBack={onBack} />
       </View>
-      {showMoreButton && isMenuVisible && (
-        <Menu
-          ref={menuRef}
-          menus={menuItems}
-          onPress={handleMenuPress}
-          onHide={() => setMenuVisible(false)}
-        />
-      )}
-      <PlaylistEditModal ref={playlistEditModalRef} />
     </>
   )
 }

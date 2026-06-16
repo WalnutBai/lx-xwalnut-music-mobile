@@ -89,7 +89,7 @@ export default memo(({ item, showSubscribeButton = false }: { item: any, showSub
         <Text size={16} numberOfLines={1}>{item.name}</Text>
         <Text size={12} color={theme['c-font-label']}>{formatSingerName(item.artists ?? [{ name: item.artistName }])}</Text>
         <Text size={12} color={theme['c-font-label']}>
-          {item.size} tracks</Text>
+          {item.size} 首</Text>
       </View>
       {showSubscribeButton && (
         <TouchableOpacity style={styles.subscribeButton} onPress={toggleSubscribe}>

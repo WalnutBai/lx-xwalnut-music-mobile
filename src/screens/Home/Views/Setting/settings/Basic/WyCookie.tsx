@@ -5,7 +5,6 @@ import { useI18n } from '@/lang';
 import { useSettingValue } from '@/store/setting/hook';
 import { updateSetting } from '@/core/common';
 import { createStyle, toast } from '@/utils/tools';
-import Button from '../../components/Button';
 import CookieManager from '@react-native-cookies/cookies';
 
 
@@ -42,12 +41,9 @@ const syncCookieToNative = async (cookie: string) => {
 export default memo(() => {
   const t = useI18n();
   const cookie = useSettingValue('common.wy_cookie');
-  const serpApiKey = useSettingValue('common.wy_serpapi_key');
 
   const setCookie = (val: string) => {
-    // 先同步到原生层
     void syncCookieToNative(val).then(() => {
-      // 再更新应用状态
       updateSetting({ 'common.wy_cookie': val });
     });
   };
@@ -55,16 +51,6 @@ export default memo(() => {
   const handleChanged: InputItemProps['onChanged'] = (text, callback) => {
     callback(text);
     setCookie(text);
-  };
-
-  const handleSerpApiKeyChanged: InputItemProps['onChanged'] = (text, callback) => {
-    callback(text);
-    updateSetting({ 'common.wy_serpapi_key': text.trim() });
-  };
-
-  const handleShowLoginModal = () => {
-    // 触发全局事件
-    global.app_event.emit('showWebLogin');
   };
 
   useEffect(() => {
@@ -86,15 +72,6 @@ export default memo(() => {
         onChanged={handleChanged}
         placeholder={t('setting_basic_wy_cookie_placeholder')}
       />
-      <InputItem
-        value={serpApiKey}
-        label="SerpApi API Key"
-        onChanged={handleSerpApiKeyChanged}
-        placeholder="用于网易云搜索补充 Google 搜索结果"
-      />
-      <View style={styles.btnContainer}>
-        <Button onPress={handleShowLoginModal}>网页登录</Button>
-      </View>
     </View>
   );
 });
@@ -102,10 +79,5 @@ export default memo(() => {
 const styles = createStyle({
   content: {
     // marginTop: 10,
-  },
-  btnContainer: {
-    marginBottom: 5,
-    paddingLeft: 20,
-    flexDirection: 'row',
   },
 });

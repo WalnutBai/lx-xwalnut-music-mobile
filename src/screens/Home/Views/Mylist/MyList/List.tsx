@@ -30,7 +30,7 @@ const DRAG_CANCEL_THRESHOLD = 6
 
 type FlatListType = FlatListProps<LX.List.MyListInfo>
 
-const ITEM_HEIGHT = scaleSizeH(40)
+const ITEM_HEIGHT = 90
 
 // 固定列表项组件（用于 DEFAULT 和 LOVE）
 const FixedListItem = memo(({

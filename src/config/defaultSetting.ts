@@ -129,7 +129,7 @@ const defaultSetting: LX.AppSetting = {
   'list.isShowMyListSubMenu': false,
   'list.isAutoSaveDailyRec': true,
   'list.isShowCover': true,
-  'list.isNewListUI': false,
+  'list.isNewListUI': true,
 
   'menu.playLater': true,
   'menu.addTo': true,

@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "react-native run-android --active-arch-only",
+    "dev:no-flipper": "set NO_FLIPPER=1 && react-native run-android --active-arch-only",
     "start": "react-native start --experimental-debugger",
     "sc": "react-native start --reset-cache",
     "rd": "react-devtools",

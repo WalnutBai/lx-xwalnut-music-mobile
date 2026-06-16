@@ -76,7 +76,7 @@ export default memo(({ albumInfo, componentId }: Props) => {
           <Text style={styles.albumName} size={18} color="#FFF" numberOfLines={2}>{albumInfo.name}</Text>
           <View style={styles.artistContainer}>{artists}</View>
           <Text style={styles.metaInfo} size={12} color="rgba(255,255,255,0.8)">
-            {albumInfo.publishTime ? dateFormat(albumInfo.publishTime, 'Y.M.D') : ''} • {albumInfo.size || albumInfo.total} tracks
+            {albumInfo.publishTime ? dateFormat(albumInfo.publishTime, 'Y.M.D') : ''} • {albumInfo.size || albumInfo.total} 首
           </Text>
         </View>
         <TouchableOpacity style={styles.followButton} onPress={toggleSubscribe}>

@@ -20,7 +20,7 @@ import { LIST_IDS } from '@/config/constant'
 import { scaleSizeH } from '@/utils/pixelRatio'
 import Loading from '@/components/common/Loading'
 
-const CARD_HEIGHT = scaleSizeH(100)
+const CARD_HEIGHT = 90
 const LONG_PRESS_MS = 350
 const DRAG_CANCEL_THRESHOLD = 6
 
@@ -80,7 +80,7 @@ const FixedPlaylistCard = memo(({
         <View style={styles.info}>
           <Text size={16} numberOfLines={2} color={theme['c-font']}>{item.name}</Text>
           {item.total > 0 ? (
-            <Text size={12} color={theme['c-font-label']}>{item.total} tracks</Text>
+            <Text size={12} color={theme['c-font-label']}>{item.total} 首</Text>
           ) : null}
         </View>
         {fetching ? (
@@ -261,7 +261,7 @@ const PlaylistCard = memo(({
           </Text>
           {item.total > 0 ? (
             <Text size={12} color={theme['c-font-label']}>
-              {item.total} tracks
+              {item.total} 首
             </Text>
           ) : null}
         </View>
@@ -700,8 +700,8 @@ const styles = createStyle({
     alignItems: 'center',
   },
   artwork: {
-    width: 80,
-    height: 80,
+    width: 70,
+    height: 70,
     borderRadius: 8,
   },
   info: {

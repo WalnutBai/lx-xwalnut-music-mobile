@@ -23,6 +23,18 @@ export interface SubscribedPlaylistInfo {
   description?: string
 }
 
+export interface TxPlaylistInfo {
+  id: string
+  tid: number
+  dirid: number
+  name: string
+  cover: string
+  songCount: number
+  desc: string
+  isFavorites: boolean
+  isCollected: boolean
+}
+
 export interface InitState {
   wy_uid: string | null
   wy_liked_song_ids: Set<string>
@@ -32,6 +44,7 @@ export interface InitState {
   wy_vip_type: number
   // QQ音乐
   tx_liked_song_ids: Set<string>
+  tx_subscribed_playlists: TxPlaylistInfo[]
 }
 const state: InitState = {
   wy_uid: null,
@@ -42,6 +55,7 @@ const state: InitState = {
   wy_vip_type: 0,
   // QQ音乐
   tx_liked_song_ids: new Set(),
+  tx_subscribed_playlists: [],
 }
 
 export default state

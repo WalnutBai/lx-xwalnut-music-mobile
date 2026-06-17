@@ -1,4 +1,4 @@
-import state, {FollowedArtistInfo, SubscribedAlbumInfo, SubscribedPlaylistInfo} from './state'
+import state, {FollowedArtistInfo, SubscribedAlbumInfo, SubscribedPlaylistInfo, TxPlaylistInfo} from './state'
 
 export const setWyUid = (uid: string) => {
   state.wy_uid = uid
@@ -132,4 +132,24 @@ export const removeTxLikedSong = (id: string | number) => {
   if (!state.tx_liked_song_ids.has(strId)) return
   state.tx_liked_song_ids.delete(strId)
   global.state_event.txLikedListChanged()
+}
+
+// QQ音乐歌单列表
+export const setTxSubscribedPlaylists = (playlists: TxPlaylistInfo[]) => {
+  state.tx_subscribed_playlists = playlists
+  global.state_event.txSubscribedPlaylistsChanged()
+}
+export const addTxSubscribedPlaylist = (playlist: TxPlaylistInfo) => {
+  if (state.tx_subscribed_playlists.some(p => String(p.id) === String(playlist.id))) return
+  state.tx_subscribed_playlists = [playlist, ...state.tx_subscribed_playlists]
+  global.state_event.txSubscribedPlaylistsChanged()
+}
+export const removeTxSubscribedPlaylist = (id: string | number) => {
+  const strId = String(id)
+  const index = state.tx_subscribed_playlists.findIndex(p => String(p.id) === strId)
+  if (index < 0) return
+  const newList = [...state.tx_subscribed_playlists]
+  newList.splice(index, 1)
+  state.tx_subscribed_playlists = newList
+  global.state_event.txSubscribedPlaylistsChanged()
 }

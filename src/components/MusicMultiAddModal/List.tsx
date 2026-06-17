@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef } from 'react'
+import { useMemo, useState } from 'react'
 import { ScrollView, TouchableOpacity, View } from 'react-native'
 import Text from '@/components/common/Text'
 import { useMyList } from '@/store/list/hook'
@@ -9,8 +9,7 @@ import { useTheme } from '@/store/theme/hook'
 import { useI18n } from '@/lang'
 import { createStyle } from '@/utils/tools'
 import { scaleSizeW, scaleSizeH } from '@/utils/pixelRatio'
-import { useWySubscribedPlaylists, useWyUid } from '@/store/user/hook'
-import txApi from '@/utils/musicSdk/tx/user'
+import { useWySubscribedPlaylists, useWyUid, useTxSubscribedPlaylists } from '@/store/user/hook'
 
 const styles = createStyle({
   list: {
@@ -74,50 +73,11 @@ export default ({
   playlistType: 'local' | 'wy' | 'tx'
 }) => {
   const windowSize = useWindowSize()
-  const [txPlaylists, setTxPlaylists] = useState<any[]>([])
-  const isLoaded = useRef(false)
   
   const localLists = useMyList()
   const onlinePlaylists = useWySubscribedPlaylists()
+  const txPlaylists = useTxSubscribedPlaylists()
   const uid = useWyUid()
-
-  useEffect(() => {
-    // 在组件挂载时就预加载 QQ 歌单，避免切换标签时界面抖动
-    if (playlistType === 'tx') {
-      if (!isLoaded.current) {
-        isLoaded.current = true
-        txApi.getUserPlaylists().then(playlists => {
-          const formattedPlaylists = playlists.map(p => ({
-            id: `tx__${p.id}`,
-            name: p.name,
-            cover: p.cover,
-            songCount: p.songCount,
-            creator: { nickname: 'QQ音乐' },
-            dirid: p.dirid,
-          }))
-          setTxPlaylists(formattedPlaylists)
-        }).catch(() => {
-          setTxPlaylists([])
-        })
-      }
-    } else if (!isLoaded.current) {
-      // 预加载：在组件挂载时也加载 QQ 歌单数据
-      isLoaded.current = true
-      txApi.getUserPlaylists().then(playlists => {
-        const formattedPlaylists = playlists.map(p => ({
-          id: `tx__${p.id}`,
-          name: p.name,
-          cover: p.cover,
-          songCount: p.songCount,
-          creator: { nickname: 'QQ音乐' },
-          dirid: p.dirid,
-        }))
-        setTxPlaylists(formattedPlaylists)
-      }).catch(() => {
-        setTxPlaylists([])
-      })
-    }
-  }, [playlistType])
 
   const allList = useMemo(() => {
     let sourceList

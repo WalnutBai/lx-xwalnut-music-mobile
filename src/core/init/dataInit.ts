@@ -17,7 +17,8 @@ import {
   setWySubscribedAlbums,
   setWySubscribedPlaylists,
   setWyUid,
-  setTxLikedSongs
+  setTxLikedSongs,
+  setTxSubscribedPlaylists
 } from '@/store/user/action.ts'
 import {getDownloadTasks} from "@/utils/data/download.ts";
 import downloadActions from '@/store/download/action';
@@ -111,6 +112,26 @@ export default async (appSetting: LX.AppSetting) => {
         bootLog(`Tx like list init failed: ${err.message}`)
       }
     })()
+
+    bootLog('Tx playlists init...')
+    txUserApi.getUserPlaylists().then(playlists => {
+      const formattedPlaylists = playlists.map((p: any) => ({
+        id: `tx__${p.id}`,
+        name: p.name,
+        cover: p.cover,
+        songCount: p.songCount,
+        creator: { nickname: 'QQ音乐' },
+        dirid: p.dirid,
+        tid: p.tid,
+        desc: p.desc,
+        isFavorites: p.isFavorites,
+        isCollected: p.isCollected,
+      }))
+      setTxSubscribedPlaylists(formattedPlaylists)
+      bootLog('Tx playlists inited.')
+    }).catch(err => {
+      bootLog(`Tx playlists init failed: ${err.message}`)
+    })
   }
 
   setNavActiveId((await getViewPrevState()).id)

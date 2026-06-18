@@ -9,7 +9,7 @@ import Text from '@/components/common/Text';
 import { toast } from '@/utils/tools';
 import CookieManager from '@react-native-cookies/cookies';
 
-const LOGIN_URL = 'https://y.qq.com/n/ryqq/login';
+const LOGIN_URL = 'https://y.qq.com/; 
 
 export interface QQWebLoginModalType {
   show: () => void;
@@ -150,7 +150,7 @@ export default forwardRef<QQWebLoginModalType, {}>((props, ref) => {
         <View style={[styles.footer, { backgroundColor: theme['c-content-background'], borderTopColor: theme['c-border'] }]}>
           <View style={[styles.footerCard, { backgroundColor: '#fff5f5', borderColor: '#ffd6d6' }]}>
             <Icon name="help" size={14} color="#ff6b6b" />
-            <Text style={[styles.tip, { color: '#ff6b6b' }]} size={13}>登录成功后点击下方按钮获取Cookie</Text>
+            <Text style={[styles.tip, { color: '#ff6b6b' }]} size={13}>请等待登录完全完成后再获取Cookie，否则会获取错误（约等待3秒）</Text>
           </View>
           <TouchableOpacity
             onPress={handleGetCookie}
@@ -161,9 +161,7 @@ export default forwardRef<QQWebLoginModalType, {}>((props, ref) => {
           </TouchableOpacity>
         </View>
       </View>
-    </Modal>
-  );
-});
+const LOGIN_URL = 'https://y.qq.com/n/ryqq/login';
 
 const styles = StyleSheet.create({
   container: {

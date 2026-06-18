@@ -1097,7 +1097,11 @@ export default {
 
       const retCode = body?.req_0?.data?.retCode
       if (retCode !== 0) {
-        throw new Error(body?.req_0?.data?.retMsg || `删除歌单失败，错误码: ${retCode}`)
+        const retMsg = body?.req_0?.data?.retMsg
+        if (retCode === undefined || retCode === null) {
+          throw new Error('删除歌单失败，Cookie无效或已过期，请重新设置')
+        }
+        throw new Error(retMsg || `删除歌单失败，错误码: ${retCode}`)
       }
 
       txLog.info('删除歌单成功', { dirid })

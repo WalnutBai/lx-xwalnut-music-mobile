@@ -100,12 +100,12 @@ const startDownload = async (task: DownloadTask) => {
   // 如果是 bilibili 源，先使用临时扩展名下载
   let downloadFilePath = task.filePath;
   if (isBilibiliSource && urlExtension) {
-    const downloadDir = settingState.setting['download.path'] || (RNFetchBlob.fs.dirs.MusicDir + '/LX-N Music');
+    const downloadDir = settingState.setting['download.path'] || (RNFetchBlob.fs.dirs.MusicDir + '/LX-X Music');
     downloadFilePath = `${downloadDir}/${task.fileName}.download.${urlExtension}`;
     console.log(`[Download] Bilibili 源使用临时路径下载: ${downloadFilePath}`);
   } else if (urlExtension && urlExtension !== taskExt) {
     // 对于所有其他源，如果 URL 的真实扩展名与任务路径不一致，使用真实扩展名
-    const downloadDir = settingState.setting['download.path'] || (RNFetchBlob.fs.dirs.MusicDir + '/LX-N Music');
+    const downloadDir = settingState.setting['download.path'] || (RNFetchBlob.fs.dirs.MusicDir + '/LX-X Music');
     downloadFilePath = `${downloadDir}/${task.fileName}.download.${urlExtension}`;
     finalFilePath = `${downloadDir}/${task.fileName}.${urlExtension}`;
     console.log(`[Download] URL 扩展名(${urlExtension})与任务扩展名(${taskExt})不一致，使用真实扩展名下载: ${downloadFilePath} -> ${finalFilePath}`);
@@ -213,7 +213,7 @@ const handleMetadata = async (task: DownloadTask, filePath: string) => {
     }
   }
 
-  const downloadDir = settingState.setting['download.path'] || (RNFetchBlob.fs.dirs.MusicDir + '/LX-N Music')
+  const downloadDir = settingState.setting['download.path'] || (RNFetchBlob.fs.dirs.MusicDir + '/LX-X Music')
   // 写入封面
   if (settingState.setting['download.writePicture']) {
     try {
@@ -422,7 +422,7 @@ export const addTask = (musicInfo: LX.Music.MusicInfo, quality: LX.Quality, isFo
     .replace('歌名', musicInfo.name)
     .replace('歌手', finalSingerString);
   fileName = filterFileName(fileName);
-  const downloadDir = settingState.setting['download.path'] || (RNFetchBlob.fs.dirs.MusicDir + '/LX-N Music');
+  const downloadDir = settingState.setting['download.path'] || (RNFetchBlob.fs.dirs.MusicDir + '/LX-X Music');
   const filePath = `${downloadDir}/${fileName}.${extension}`;
 
   const task: DownloadTask = {

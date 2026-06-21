@@ -112,10 +112,10 @@
           <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
         </intent-filter>
         <intent-filter>
-          <action android:name="com.lxnetease.music.mobile.widget.PLAY_PAUSE" />
-          <action android:name="com.lxnetease.music.mobile.widget.PREV" />
-          <action android:name="com.lxnetease.music.mobile.widget.NEXT" />
-          <action android:name="com.lxnetease.music.mobile.widget.UPDATE" />
+          <action android:name="com.lxwalnut.music.mobile.widget.PLAY_PAUSE" />
+          <action android:name="com.lxwalnut.music.mobile.widget.PREV" />
+          <action android:name="com.lxwalnut.music.mobile.widget.NEXT" />
+          <action android:name="com.lxwalnut.music.mobile.widget.UPDATE" />
         </intent-filter>
         <meta-data
           android:name="android.appwidget.provider"

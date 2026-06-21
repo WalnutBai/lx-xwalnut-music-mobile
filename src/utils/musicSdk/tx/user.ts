@@ -263,7 +263,7 @@ export default {
         },
         songs: (playlist.songlist || []).map((song: any) => ({
           id: song.songid || song.id,
-          name: song.songname || song.name || '',
+          name: song.title || song.songname || song.name || '',
           artists: (song.singer || []).map((s: any) => ({
             id: s.id || '',
             name: s.name || '',
@@ -770,7 +770,7 @@ export default {
           // 统一使用 songId 作为 mid（与 likeKey 一致）
           mid: String(song.id),
           songmid: song.songmid || song.mid,
-          name: song.name || song.title,
+          name: song.title || song.name,
           singer: (song.singer || []).map((s: any) => s.name).join('/'),
           albumName: song.album?.name || '',
           albumMid: song.album?.mid || '',

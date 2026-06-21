@@ -81,6 +81,7 @@ export async function pushHomeScreen() {
                 layout: {
                   componentBackgroundColor: theme['c-content-background'],
                 },
+                gestureEnabled: false,
               },
             },
           },

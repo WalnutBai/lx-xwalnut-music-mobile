@@ -108,9 +108,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.lxnetease.music.mobile"
+    namespace "com.lxwalnut.music.mobile"
     defaultConfig {
-        applicationId "com.lxnetease.music.mobile"
+        applicationId "com.lxwalnut.music.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode verCode

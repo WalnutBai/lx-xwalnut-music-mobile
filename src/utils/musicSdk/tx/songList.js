@@ -283,31 +283,31 @@ export default {
 
     log.info(`[TX SongList] getListDetailNew 成功`, { songCount: data.songlist.length, dissname: data.dissinfo?.dissname })
 
-    // 如果 dissinfo 中没有歌单名，尝试从旧接口获取
+    // 如果 dissinfo 中缺少关键字段，尝试从旧接口获取
     let dissname = data.dissinfo?.dissname || ''
     let logo = data.dissinfo?.logo || ''
     let desc = data.dissinfo?.desc ? decodeName(data.dissinfo.desc).replace(/<br>/g, '\n') : ''
     let nickname = data.dissinfo?.nickname || ''
     let visitnum = data.dissinfo?.visitnum || 0
 
-    if (!dissname) {
+    if (!dissname || !logo || !visitnum) {
       try {
-        log.info(`[TX SongList] getListDetailNew dissname为空，尝试旧接口`)
+        log.info(`[TX SongList] getListDetailNew dissinfo缺失关键字段(dissname:${!!dissname} logo:${!!logo} visitnum:${!!visitnum})，尝试旧接口`)
         const oldUrl = this.getListDetailUrl(id)
         const { body: oldBody } = await httpFetch(oldUrl, {
           headers: { Origin: 'https://y.qq.com', Referer: `https://y.qq.com/n/yqq/playsquare/${id}.html` },
         }).promise
         if (oldBody?.cdlist?.[0]) {
           const cdlist = oldBody.cdlist[0]
-          dissname = cdlist.dissname || ''
-          logo = cdlist.logo || ''
-          desc = cdlist.desc ? decodeName(cdlist.desc).replace(/<br>/g, '\n') : ''
-          nickname = cdlist.nickname || ''
-          visitnum = cdlist.visitnum || 0
-          log.info(`[TX SongList] 旧接口获取到歌单名`, { dissname })
+          dissname = cdlist.dissname || dissname
+          logo = cdlist.logo || logo
+          desc = cdlist.desc ? decodeName(cdlist.desc).replace(/<br>/g, '\n') : desc
+          nickname = cdlist.nickname || nickname
+          visitnum = cdlist.visitnum || visitnum
+          log.info(`[TX SongList] 旧接口获取到歌单信息`, { dissname, logo, visitnum })
         }
       } catch (e) {
-        log.warn(`[TX SongList] 旧接口获取歌单名失败`, { error: e.message })
+        log.warn(`[TX SongList] 旧接口获取歌单信息失败`, { error: e.message })
       }
     }
 
@@ -342,7 +342,7 @@ export default {
 
       return {
         singer: formatSingerName(item.singer, 'name'),
-        name: item.name,
+        name: item.title || item.name,
         albumName: item.album.name,
         albumId: item.album.mid,
         source: 'tx',

@@ -105,7 +105,7 @@ export const storageDataPrefixOld = {
   notificationTipEnable: '@notification_tip_enable',
 } as const
 
-export const APP_PROVIDER_NAME = 'com.lxnetease.music.mobile.provider'
+export const APP_PROVIDER_NAME = 'com.lxwalnut.music.mobile.provider'
 
 export const NAV_MENUS = [
   { id: 'nav_search', icon: 'search-2' },

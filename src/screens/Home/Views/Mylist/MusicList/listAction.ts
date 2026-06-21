@@ -239,7 +239,7 @@ export const handleDownload = async (musicInfo: LX.Music.MusicInfo, quality: LX.
 
       fileName = filterFileName(fileName) // 过滤非法字符
 
-      const downloadDir = settingState.setting['download.path'] || (RNFetchBlob.fs.dirs.MusicDir + '/LX-N Music')
+      const downloadDir = settingState.setting['download.path'] || (RNFetchBlob.fs.dirs.MusicDir + '/LX-X Music')
       const path = `${downloadDir}/${fileName}.${extension}`
 
       const downloader = RNFetchBlob.config({

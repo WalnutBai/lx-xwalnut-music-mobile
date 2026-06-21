@@ -23,7 +23,7 @@ export const privateStorageDirectoryPath = Dirs.DocumentDir
 export const getWebDAVPrivateDirectory = () => {
   const docDir = privateStorageDirectoryPath
   if (!docDir || typeof docDir !== 'string') {
-    return '/storage/emulated/0/Music/LX-N Music/WebDAV'
+    return '/storage/emulated/0/Music/LX-X Music/WebDAV'
   }
   return `${docDir}/WebDAV`
 }

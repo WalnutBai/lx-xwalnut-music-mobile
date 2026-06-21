@@ -12,7 +12,7 @@ body:
           required: true
         - label: 我已搜索 [本仓库Issue 列表](https://github.com/WalnutBai/lx-n-music-mobile-pro/issues?q=is%3Aissue+) 和 [原仓库Issue 列表](https://github.com/lyswhut/lx-music-mobile/issues)，但没有发现类似的问题。
           required: true
-        - label: 我已阅读 [说明](https://github.com/WalnutBai/lx-n-music-mobile-pro/issues/50)。
+        - label: 我已阅读 [说明](https://github.com/WalnutBai/lx-lxwalnut-music-mobile/issues/50)。
           required: true
         - label: 我已浏览了全部设置，并尝试调整相关选项，但问题仍然存在。
           required: true
@@ -29,7 +29,7 @@ body:
     id: actual-behavior
     attributes:
       label: 实际行为
-      description: 对实际发生的事情的清晰详细描述，必要时附上截图，不具体说明无法处理。
+      description: 对实际发生的事情的清晰详细描述，必要时附上截图或者日志，不具体说明无法处理。
     validations:
       required: true
   - type: input
@@ -37,7 +37,7 @@ body:
     attributes:
       label: 最后正常的版本
       description: 如果有，请在此处填写最后正常的版本。
-      placeholder: 1.5.0 arm64-v8a
+      placeholder: 26.06.11 arm64-v8a
   - type: input
     id: operating-system-version
     attributes:

@@ -1,6 +1,6 @@
 <p align="center"><a href="https://github.com/lyswhut/lx-music-mobile"><img width="200" src="https://github.com/lyswhut/lx-music-mobile/blob/master/doc/images/icon.png" alt="lx-music logo"></a></p>
 
-<h1 align="center">LX-N Music 移动版</h1>
+<h1 align="center">LX-X Music 移动版</h1>
 
 <p align="center">
   <a href="https://github.com/WalnutBai/lx-lxnetease-music-mobile-pro/releases"><img src="https://img.shields.io/github/release/WalnutBai/lx-lxnetease-music-mobile-pro" alt="Release version"></a>

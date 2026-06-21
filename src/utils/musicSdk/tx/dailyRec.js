@@ -49,7 +49,7 @@ const transformSong = (item, index) => {
     
     const song = {
       id: 'tx_' + item.mid,
-      name: item.name || item.title || '',
+      name: item.title || item.name || '',
       singer,
       source: 'tx',
       interval: item.interval != null ? formatPlayTime(item.interval) : '',

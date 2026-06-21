@@ -48,6 +48,7 @@ const defaultSetting: LX.AppSetting = {
     'nav_tx_playlist',
     'nav_tx_daily_rec',
     'nav_kg_playlist',
+    'nav_kg_daily_rec',
     'nav_my_playlist',
     'nav_daily_rec',
     'nav_followed_artists',

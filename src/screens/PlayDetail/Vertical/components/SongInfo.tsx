@@ -7,9 +7,9 @@ import commonState from '@/store/common/state'
 import { createStyle, toast, clipboardWriteText } from '@/utils/tools'
 import Text from '@/components/common/Text'
 import { Icon } from '@/components/common/Icon'
-import { handleLikeMusic, handleTxLikeMusic } from '@/components/OnlineList/listAction'
+import { handleLikeMusic, handleTxLikeMusic, handleKgLikeMusic } from '@/components/OnlineList/listAction'
 import playerState from '@/store/player/state'
-import { useIsWyLiked, useIsTxLiked } from '@/store/user/hook'
+import { useIsWyLiked, useIsTxLiked, useIsKgLiked } from '@/store/user/hook'
 import { useWindowSize } from '@/utils/hooks'
 
 export default memo(() => {
@@ -46,6 +46,8 @@ export default memo(() => {
       handleLikeMusic(musicInfo as LX.Music.MusicInfoOnline)
     } else if (musicInfo.source === 'tx') {
       handleTxLikeMusic(musicInfo as LX.Music.MusicInfoOnline)
+    } else if (musicInfo.source === 'kg') {
+      handleKgLikeMusic(musicInfo as LX.Music.MusicInfoOnline)
     }
   }, [])
 
@@ -68,8 +70,11 @@ export default memo(() => {
   })()
   const isTxLiked = useIsTxLiked(txLikeKey)
 
-  const isLiked = musicInfo?.source === 'wy' ? isWyLiked : musicInfo?.source === 'tx' ? isTxLiked : false
-  const showLikeBtn = musicInfo?.source === 'wy' || musicInfo?.source === 'tx'
+  const kgSongId = (musicInfo?.source === 'kg' && musicInfo.meta?.songId) || ''
+  const isKgLiked = useIsKgLiked(kgSongId)
+
+  const isLiked = musicInfo?.source === 'wy' ? isWyLiked : musicInfo?.source === 'tx' ? isTxLiked : musicInfo?.source === 'kg' ? isKgLiked : false
+  const showLikeBtn = musicInfo?.source === 'wy' || musicInfo?.source === 'tx' || musicInfo?.source === 'kg'
 
   const handleSongNamePress = useCallback(() => {
     const songInfo = `${songName} - ${artistText}`

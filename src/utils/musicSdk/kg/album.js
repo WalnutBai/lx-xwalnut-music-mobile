@@ -1,7 +1,7 @@
 import { getMusicInfosByList } from './musicInfo'
 import { createHttpFetch } from './util'
 
-export default {
+const albumApi = {
   /**
    * 通过AlbumId获取专辑信息
    * @param {*} id
@@ -43,7 +43,8 @@ export default {
    */
   async getAlbumDetail(id, page = 1, limit = 200) {
     const albumList = await createHttpFetch(
-      `http://mobiles.kugou.com/api/v3/album/song?version=9108&albumid=${id}&plat=0&pagesize=${limit}&area_code=0&page=${page}&with_res_tag=0`
+      `http://mobiles.kugou.com/api/v3/album/song?version=9108&albumid=${id}&plat=0&pagesize=${limit}&area_code=0&page=${page}&with_res_tag=0`,
+      {}
     )
     if (!albumList.info) return Promise.reject(new Error('Get album list failed.'))
 
@@ -66,4 +67,26 @@ export default {
       },
     }
   },
+  /**
+   * 获取专辑详情和歌曲列表（兼容接口）
+   * @param {string} id - 专辑ID
+   * @returns {Object} 专辑详情和歌曲列表
+   */
+  async getAlbum(id) {
+    const data = await this.getAlbumDetail(id, 1, 200)
+    return {
+      list: data.list || [],
+      info: {
+        id: id,
+        name: data.info?.name || '',
+        img: data.info?.img || '',
+        desc: data.info?.desc || '',
+        author: data.info?.author || '',
+        source: 'kg',
+        size: data.total || 0,
+      },
+    }
+  },
 }
+
+export default albumApi

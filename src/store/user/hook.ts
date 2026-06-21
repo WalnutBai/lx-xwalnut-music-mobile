@@ -186,6 +186,25 @@ export const useTxSubscribedPlaylists = () => {
   return list;
 };
 
+export const useIsKgLiked = (songId: string | number) => {
+  const strId = String(songId)
+  const [isLiked, setIsLiked] = useState(() => state.kg_liked_song_ids.has(strId))
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      const newLikedStatus = state.kg_liked_song_ids.has(strId)
+      setIsLiked(currentStatus => currentStatus === newLikedStatus ? currentStatus : newLikedStatus)
+    }
+    global.state_event.on('kgLikedListChanged', handleUpdate)
+    handleUpdate()
+    return () => {
+      global.state_event.off('kgLikedListChanged', handleUpdate)
+    }
+  }, [strId])
+
+  return isLiked
+}
+
 export const useKgSubscribedPlaylists = () => {
   const [list, setList] = useState(() => state.kg_subscribed_playlists);
   useEffect(() => {

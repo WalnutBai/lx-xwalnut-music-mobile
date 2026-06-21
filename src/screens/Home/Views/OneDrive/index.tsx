@@ -251,7 +251,7 @@ export default memo(() => {
 
   const handleScan = useCallback(() => {
     if (!authInfo) {
-      toast('请先登录 OneDrive')
+      toast('请先登录 OneDrive，Cookie可能已失效')
       setActiveTab('config')
       return
     }

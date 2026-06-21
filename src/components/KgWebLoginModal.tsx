@@ -1,5 +1,5 @@
 import { forwardRef, useImperativeHandle, useRef, useCallback, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, TextInput, Alert, ScrollView, Dimensions } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, TextInput, ScrollView, Dimensions } from 'react-native';
 import Modal, { type ModalType } from '@/components/common/Modal';
 import WebView from 'react-native-webview';
 import { useTheme } from '@/store/theme/hook';
@@ -15,13 +15,6 @@ export interface KgWebLoginModalType {
   show: () => void;
 }
 
-// 日志类型
-interface LogEntry {
-  time: string;
-  type: 'info' | 'success' | 'error' | 'request' | 'response';
-  message: string;
-}
-
 const Header = ({ onClose }: { onClose: () => void }) => {
   const theme = useTheme();
   const statusBarHeight = useStatusbarHeight();
@@ -35,24 +28,6 @@ const Header = ({ onClose }: { onClose: () => void }) => {
       <View style={styles.placeholder} />
     </View>
   );
-};
-
-// 获取当前时间字符串
-const getTimeString = () => {
-  const now = new Date();
-  return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-};
-
-// 日志颜色
-const getLogColor = (type: LogEntry['type']) => {
-  switch (type) {
-    case 'info': return '#1677ff';
-    case 'success': return '#52c41a';
-    case 'error': return '#ff4d4f';
-    case 'request': return '#722ed1';
-    case 'response': return '#13c2c2';
-    default: return '#666666';
-  }
 };
 
 // 生成悬浮验证 HTML - 直接加载验证码，无中间页
@@ -117,36 +92,28 @@ const KgWebLoginModal = forwardRef<KgWebLoginModalType, object>((props, ref) => 
   const [code, setCode] = useState('');
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [cooldown, setCooldown] = useState(0);
   const [isLogging, setIsLogging] = useState(false);
-  const [logs, setLogs] = useState<LogEntry[]>([]);
   const [showVerify, setShowVerify] = useState(false);
   const [verifyHtml, setVerifyHtml] = useState('');
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
-  const scrollViewRef = useRef<ScrollView>(null);
+  const cooldownRef = useRef<NodeJS.Timeout | null>(null);
   const handleSendCodeRef = useRef<() => void>(() => {});
-
-  // 添加日志
-  const addLog = useCallback((type: LogEntry['type'], message: string) => {
-    setLogs(prev => [...prev, { time: getTimeString(), type, message }]);
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  }, []);
 
   // 处理验证完成
   const handleVerifyComplete = useCallback((success: boolean) => {
     setShowVerify(false);
     if (success) {
-      addLog('success', '人机验证通过，自动重新发送验证码...');
+      console.log('[KgLogin] 人机验证通过，自动重新发送验证码...');
       // 验证成功后自动重新发送验证码
       setTimeout(() => {
         handleSendCodeRef.current?.();
       }, 500);
     } else {
-      addLog('error', '人机验证失败');
+      console.log('[KgLogin] 人机验证失败');
       toast('验证失败，请稍后重试');
     }
-  }, [addLog]);
+  }, []);
 
   // 处理验证消息
   const handleVerifyMessage = useCallback(async (event: any) => {
@@ -161,13 +128,13 @@ const KgWebLoginModal = forwardRef<KgWebLoginModalType, object>((props, ref) => 
           txappid: data.appid,
         });
 
-        addLog('info', '提交验证结果...');
+        console.log('[KgLogin] 提交验证结果...');
         const result = await verifyUserInfo(data.code, 23, verifycode, '', '');
 
         if (result.success) {
           handleVerifyComplete(true);
         } else {
-          addLog('error', '验证提交失败: ' + result.message);
+          console.log('[KgLogin] 验证提交失败: ' + result.message);
           handleVerifyComplete(false);
         }
       } else if (data.type === 'cancel') {
@@ -177,7 +144,7 @@ const KgWebLoginModal = forwardRef<KgWebLoginModalType, object>((props, ref) => 
       console.error('[Verify] 错误:', e);
       handleVerifyComplete(false);
     }
-  }, [addLog, handleVerifyComplete]);
+  }, [handleVerifyComplete]);
 
   useImperativeHandle(ref, () => ({
     show() {
@@ -185,8 +152,8 @@ const KgWebLoginModal = forwardRef<KgWebLoginModalType, object>((props, ref) => 
       setCode('');
       setIsSendingCode(false);
       setCountdown(0);
+      setCooldown(0);
       setIsLogging(false);
-      setLogs([]);
       setShowVerify(false);
       modalRef.current?.setVisible(true);
     },
@@ -197,8 +164,29 @@ const KgWebLoginModal = forwardRef<KgWebLoginModalType, object>((props, ref) => 
       clearInterval(countdownRef.current);
       countdownRef.current = null;
     }
+    if (cooldownRef.current) {
+      clearInterval(cooldownRef.current);
+      cooldownRef.current = null;
+    }
     setShowVerify(false);
     modalRef.current?.setVisible(false);
+  }, []);
+
+  // 启动冷却时间（2秒防高频发送）
+  const startCooldown = useCallback(() => {
+    setCooldown(2);
+    cooldownRef.current = setInterval(() => {
+      setCooldown(prev => {
+        if (prev <= 1) {
+          if (cooldownRef.current) {
+            clearInterval(cooldownRef.current);
+            cooldownRef.current = null;
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
   }, []);
 
   // 发送验证码
@@ -207,15 +195,19 @@ const KgWebLoginModal = forwardRef<KgWebLoginModalType, object>((props, ref) => 
       toast('请输入正确的手机号');
       return;
     }
+    if (cooldown > 0) {
+      toast('请稍后再试');
+      return;
+    }
 
     setIsSendingCode(true);
-    addLog('info', `准备发送验证码到: ${phone}`);
+    console.log('[KgLogin] 准备发送验证码到:', phone);
 
     try {
-      const result = await sendCaptcha(phone, (msg) => addLog('request', msg));
+      const result = await sendCaptcha(phone, (msg) => console.log('[KgLogin]', msg));
 
       if (result.success) {
-        addLog('success', '验证码发送成功');
+        console.log('[KgLogin] 验证码发送成功');
         toast('验证码已发送');
         let seconds = 60;
         setCountdown(seconds);
@@ -230,30 +222,31 @@ const KgWebLoginModal = forwardRef<KgWebLoginModalType, object>((props, ref) => 
           }
         }, 1000);
       } else if (result.ssaCode) {
-        addLog('info', `需要人机验证: ${result.ssaCode}`);
+        console.log('[KgLogin] 需要人机验证:', result.ssaCode);
         toast('需要人机验证');
         
         // 获取验证信息
         const verifyResult = await getVerifyInfo(result.ssaCode);
         if (verifyResult.success && verifyResult.data?.txappid) {
-          addLog('info', `获取验证信息成功, txappid: ${verifyResult.data.txappid}`);
+          console.log('[KgLogin] 获取验证信息成功, txappid:', verifyResult.data.txappid);
           // 直接显示悬浮验证
           setVerifyHtml(generateVerifyHtml(verifyResult.data.txappid, result.ssaCode));
           setShowVerify(true);
         } else {
-          addLog('error', '获取验证信息失败: ' + verifyResult.message);
+          console.log('[KgLogin] 获取验证信息失败: ' + verifyResult.message);
         }
       } else {
-        addLog('error', `发送失败: ${result.message}`);
+        console.log('[KgLogin] 发送失败: ' + result.message);
         toast(result.message || '发送验证码失败');
       }
     } catch (err: any) {
-      addLog('error', `请求异常: ${err.message || err}`);
+      console.log('[KgLogin] 请求异常: ' + (err.message || err));
       toast('发送验证码失败');
     } finally {
       setIsSendingCode(false);
+      startCooldown();
     }
-  }, [phone, addLog]);
+  }, [phone, cooldown, startCooldown]);
 
   // 保持 ref 指向最新的 handleSendCode
   handleSendCodeRef.current = handleSendCode;
@@ -270,90 +263,86 @@ const KgWebLoginModal = forwardRef<KgWebLoginModalType, object>((props, ref) => 
     }
 
     setIsLogging(true);
-    addLog('info', `准备登录: 手机=${phone}`);
+    console.log('[KgLogin] 准备登录: 手机=', phone);
 
     try {
-      const result = await loginByPhone(phone, code, (msg) => addLog('request', msg));
+      const result = await loginByPhone(phone, code, (msg) => console.log('[KgLogin]', msg));
 
       if (result.success && result.data) {
-        addLog('success', `登录成功: userid=${result.data.userid}`);
+        console.log('[KgLogin] 登录成功: userid=', result.data.userid);
         const cookieString = buildCookieString(result.data);
         global.app_event.emit('kg-cookie-set', cookieString);
         toast('登录成功！');
         handleClose();
       } else {
-        addLog('error', `登录失败: ${result.message}`);
+        console.log('[KgLogin] 登录失败: ' + result.message);
         toast(result.message || '登录失败');
       }
     } catch (err: any) {
-      addLog('error', `请求异常: ${err.message || err}`);
+      console.log('[KgLogin] 请求异常: ' + (err.message || err));
       toast('登录失败');
     } finally {
       setIsLogging(false);
     }
-  }, [phone, code, handleClose, addLog]);
-
-  // 退出登录
-  const handleLogout = useCallback(() => {
-    Alert.alert('退出登录', '确定要退出酷狗音乐登录吗？', [
-      { text: '取消', style: 'cancel' },
-      { text: '确定', onPress: () => {
-        global.app_event.emit('kg-cookie-set', '');
-        addLog('info', '已退出登录');
-        toast('已退出登录');
-      }},
-    ]);
-  }, [addLog]);
+  }, [phone, code, handleClose]);
 
   return (
     <Modal ref={modalRef} statusBarPadding={false} bgHide={false}>
       <View style={[styles.container, { backgroundColor: theme['c-content-background'] }]}>
         <Header onClose={handleClose} />
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.formContainer}>
-            <Text size={16} weight="600" style={styles.title}>手机号登录</Text>
-            <Text size={13} style={[styles.subtitle, { color: theme['c-font-label'] }]}>请使用酷狗音乐账号登录</Text>
-
-            {/* 手机号输入框 */}
-            <View style={[styles.inputContainer, { borderColor: theme['c-border'] }]}>
-              <Icon name="search-2" size={20} color={theme['c-font-label']} />
-              <TextInput
-                style={[styles.input, { color: theme['c-font'] }]}
-                placeholder="请输入手机号"
-                placeholderTextColor={theme['c-font-label']}
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-                maxLength={11}
-                editable={!isLogging}
-              />
+            <View style={styles.titleContainer}>
+              <Text size={20} weight="700" style={styles.title}>手机号登录</Text>
+              <Text size={14} style={[styles.subtitle, { color: theme['c-font-label'] }]}>请使用酷狗音乐账号登录</Text>
             </View>
 
-            {/* 验证码输入框 */}
-            <View style={styles.codeRow}>
-              <View style={[styles.codeInputContainer, { borderColor: theme['c-border'] }]}>
-                <Icon name="setting" size={20} color={theme['c-font-label']} />
+            {/* 手机号输入框 */}
+            <View style={styles.inputGroup}>
+              <Text size={13} weight="500" style={[styles.inputLabel, { color: theme['c-font-label'] }]}>手机号</Text>
+              <View style={[styles.inputContainer, { borderColor: theme['c-border'], backgroundColor: theme['c-content-background'] }]}>
+                <Icon name="search-2" size={18} color={theme['c-font-label']} />
                 <TextInput
                   style={[styles.input, { color: theme['c-font'] }]}
-                  placeholder="请输入验证码"
+                  placeholder="请输入手机号"
                   placeholderTextColor={theme['c-font-label']}
-                  value={code}
-                  onChangeText={setCode}
-                  keyboardType="number-pad"
-                  maxLength={6}
+                  value={phone}
+                  onChangeText={setPhone}
+                  keyboardType="phone-pad"
+                  maxLength={11}
                   editable={!isLogging}
                 />
               </View>
-              <TouchableOpacity
-                style={[styles.sendCodeBtn, { backgroundColor: (countdown > 0 || isSendingCode) ? theme['c-border'] : '#1677ff' }]}
-                onPress={handleSendCode}
-                disabled={countdown > 0 || isSendingCode || isLogging}
-                activeOpacity={0.8}
-              >
-                <Text size={14} color="#ffffff" weight="500">
-                  {countdown > 0 ? `${countdown}s` : isSendingCode ? '发送中...' : '获取验证码'}
-                </Text>
-              </TouchableOpacity>
+            </View>
+
+            {/* 验证码输入框 */}
+            <View style={styles.inputGroup}>
+              <Text size={13} weight="500" style={[styles.inputLabel, { color: theme['c-font-label'] }]}>验证码</Text>
+              <View style={styles.codeRow}>
+                <View style={[styles.codeInputContainer, { borderColor: theme['c-border'], backgroundColor: theme['c-content-background'] }]}>
+                  <Icon name="setting" size={18} color={theme['c-font-label']} />
+                  <TextInput
+                    style={[styles.input, { color: theme['c-font'] }]}
+                    placeholder="请输入验证码"
+                    placeholderTextColor={theme['c-font-label']}
+                    value={code}
+                    onChangeText={setCode}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    editable={!isLogging}
+                  />
+                </View>
+                <TouchableOpacity
+                  style={[styles.sendCodeBtn, { backgroundColor: (countdown > 0 || isSendingCode || cooldown > 0 || isLogging) ? 'rgba(22, 119, 255, 0.5)' : '#1677ff' }]}
+                  onPress={handleSendCode}
+                  disabled={countdown > 0 || isSendingCode || cooldown > 0 || isLogging}
+                  activeOpacity={0.8}
+                >
+                  <Text size={13} color="#ffffff" weight="500">
+                    {countdown > 0 ? `${countdown}s` : isSendingCode ? '发送中' : cooldown > 0 ? '请稍候' : '获取验证码'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* 登录按钮 */}
@@ -365,33 +354,6 @@ const KgWebLoginModal = forwardRef<KgWebLoginModalType, object>((props, ref) => 
             >
               <Text size={16} color="#ffffff" weight="600">{isLogging ? '登录中...' : '登录'}</Text>
             </TouchableOpacity>
-
-            {/* 退出登录按钮 */}
-            <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.7}>
-              <Text size={14} color="#ff6b6b">退出登录</Text>
-            </TouchableOpacity>
-
-            {/* 日志显示区域 */}
-            <View style={[styles.logContainer, { borderColor: theme['c-border'] }]}>
-              <View style={styles.logHeader}>
-                <Text size={13} weight="600">日志</Text>
-                <TouchableOpacity onPress={() => setLogs([])}>
-                  <Text size={12} color="#1677ff">清空</Text>
-                </TouchableOpacity>
-              </View>
-              <ScrollView ref={scrollViewRef} style={styles.logScroll} nestedScrollEnabled>
-                {logs.length === 0 ? (
-                  <Text size={12} style={[styles.logEmpty, { color: theme['c-font-label'] }]}>暂无日志</Text>
-                ) : (
-                  logs.map((log, index) => (
-                    <View key={index} style={styles.logItem}>
-                      <Text size={11} style={styles.logTime}>{log.time}</Text>
-                      <Text size={11} style={{ color: getLogColor(log.type), flex: 1 }}>{log.message}</Text>
-                    </View>
-                  ))
-                )}
-              </ScrollView>
-            </View>
           </View>
         </ScrollView>
 
@@ -439,42 +401,45 @@ const styles = StyleSheet.create({
   backButton: { padding: 8, width: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
   placeholder: { width: 44 },
   scrollView: { flex: 1 },
-  scrollContent: { padding: 24 },
-  formContainer: { gap: 16 },
-  title: { textAlign: 'center', marginBottom: 4 },
-  subtitle: { textAlign: 'center', marginBottom: 8 },
+  scrollContent: { padding: 24, paddingBottom: 40 },
+  formContainer: { gap: 20 },
+  titleContainer: { alignItems: 'center', marginBottom: 8 },
+  title: { textAlign: 'center' },
+  subtitle: { textAlign: 'center', marginTop: 8 },
+  inputGroup: { gap: 8 },
+  inputLabel: { paddingLeft: 4 },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 10,
     paddingHorizontal: 12,
-    height: 48,
+    height: 46,
     gap: 8,
   },
-  codeRow: { flexDirection: 'row', gap: 12 },
+  codeRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   codeInputContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 10,
     paddingHorizontal: 12,
-    height: 48,
+    height: 46,
     gap: 8,
   },
-  input: { flex: 1, fontSize: 16, padding: 0 },
+  input: { flex: 1, fontSize: 15, padding: 0 },
   sendCodeBtn: {
-    paddingHorizontal: 16,
-    height: 48,
-    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 46,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 100,
+    width: 100,
   },
   loginBtn: {
     height: 48,
-    borderRadius: 16,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#1677ff',
@@ -484,21 +449,7 @@ const styles = StyleSheet.create({
     elevation: 4,
     marginTop: 8,
   },
-  logoutBtn: { alignItems: 'center', paddingVertical: 12 },
-  logContainer: { borderWidth: 1, borderRadius: 12, marginTop: 16, maxHeight: 200 },
-  logHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  logScroll: { padding: 8 },
-  logEmpty: { textAlign: 'center', padding: 16 },
-  logItem: { flexDirection: 'row', gap: 8, marginBottom: 4 },
-  logTime: { color: '#999999', minWidth: 60 },
+
   // 悬浮验证层
   verifyOverlay: {
     position: 'absolute',

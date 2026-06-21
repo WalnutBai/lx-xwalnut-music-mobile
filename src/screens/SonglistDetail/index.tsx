@@ -58,7 +58,7 @@ const ListHeader = ({ detailInfo, info, onBack }: { detailInfo: DetailInfo, info
         removeWySubscribedPlaylist(info.id)
       }
     }).catch(err => {
-      toast(`操作失败: ${err.message}`)
+      toast(`操作失败: ${err.message}，可能是Cookie已失效，请重新登录`)
     })
   }, [isSubscribed, info, detailInfo])
 

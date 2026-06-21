@@ -2,6 +2,7 @@ import {forwardRef, useImperativeHandle, useRef, useState, useCallback, memo, us
 import { FlatList, RefreshControl } from 'react-native'
 import wyMusicSearch from '@/utils/musicSdk/wy/musicSearch'
 import txMusicSearch from '@/utils/musicSdk/tx/musicSearch'
+import kgMusicSearch from '@/utils/musicSdk/kg/musicSearch'
 import { useTheme } from '@/store/theme/hook'
 import SingerListItem from '../FollowedArtists/ListItem'
 import AlbumListItem from '../../Views/SubscribedAlbums/ListItem'
@@ -51,8 +52,8 @@ export default forwardRef(({ searchType, source }: SearchResultListProps, ref) =
     }
     setLoading(true)
 
-    // 歌手/专辑搜索仅支持网易云与QQ音乐平台
-    if (source !== 'wy' && source !== 'tx') {
+    // 歌手/专辑搜索支持网易云、QQ音乐和酷狗平台
+    if (source !== 'wy' && source !== 'tx' && source !== 'kg') {
       toast('当前音源平台暂不支持歌手/专辑搜索')
       setLoading(false)
       setList([])
@@ -60,11 +61,11 @@ export default forwardRef(({ searchType, source }: SearchResultListProps, ref) =
       return
     }
 
-    const musicSearch = source === 'tx' ? txMusicSearch : wyMusicSearch
+    const musicSearch = source === 'tx' ? txMusicSearch : source === 'kg' ? kgMusicSearch : wyMusicSearch
     log.info('[SearchResultList] === 开始搜索 ===', {
       searchType,
       source,
-      musicSearchModule: source === 'tx' ? 'txMusicSearch' : 'wyMusicSearch',
+      musicSearchModule: source === 'tx' ? 'txMusicSearch' : source === 'kg' ? 'kgMusicSearch' : 'wyMusicSearch',
     })
     let searchPromise
     if (searchType === 'singer') {

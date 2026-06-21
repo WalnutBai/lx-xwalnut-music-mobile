@@ -11,8 +11,8 @@ import Badge, { type BadgeType } from '@/components/common/Badge'
 import Image from '@/components/common/Image'
 import PlayingIcon from '@/components/common/PlayingIcon'
 import { useI18n } from '@/lang'
-import { useIsWyLiked, useIsTxLiked } from '@/store/user/hook'
-import { handleLikeMusic, handleTxLikeMusic } from '@/components/OnlineList/listAction'
+import { useIsWyLiked, useIsTxLiked, useIsKgLiked } from '@/store/user/hook'
+import { handleLikeMusic, handleTxLikeMusic, handleKgLikeMusic } from '@/components/OnlineList/listAction'
 
 export const ITEM_HEIGHT = scaleSizeH(LIST_ITEM_HEIGHT)
 
@@ -80,14 +80,17 @@ export default memo(
       ? String(txSongId) 
       : (item.meta as any).songmid || (item.meta as any).strMediaMid || (typeof item.id === 'string' && item.id.startsWith('tx_') ? item.id.slice(3) : item.id)
     const isTxLiked = useIsTxLiked(txSongMid)
-    const showLikeButton = item.source === 'wy' || item.source === 'tx'
-    const isLiked = item.source === 'wy' ? isWyLiked : item.source === 'tx' ? isTxLiked : false
+    const isKgLiked = useIsKgLiked(item.meta.songId)
+    const showLikeButton = item.source === 'wy' || item.source === 'tx' || item.source === 'kg'
+    const isLiked = item.source === 'wy' ? isWyLiked : item.source === 'tx' ? isTxLiked : item.source === 'kg' ? isKgLiked : false
 
     const handleLike = () => {
       if (item.source === 'wy') {
         handleLikeMusic(item as LX.Music.MusicInfoOnline)
       } else if (item.source === 'tx') {
         handleTxLikeMusic(item as LX.Music.MusicInfoOnline)
+      } else if (item.source === 'kg') {
+        handleKgLikeMusic(item as LX.Music.MusicInfoOnline)
       }
     }
 

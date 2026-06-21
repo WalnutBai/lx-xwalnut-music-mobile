@@ -10,8 +10,8 @@ import { LIST_ITEM_HEIGHT } from '@/config/constant'
 import { createStyle, type RowInfo } from '@/utils/tools'
 import Image from '@/components/common/Image'
 import PlayingIcon from '@/components/common/PlayingIcon'
-import { useIsWyLiked, useIsTxLiked } from '@/store/user/hook'
-import { handleLikeMusic, handleTxLikeMusic } from './listAction'
+import { useIsWyLiked, useIsTxLiked, useIsKgLiked } from '@/store/user/hook'
+import { handleLikeMusic, handleTxLikeMusic, handleKgLikeMusic } from './listAction'
 
 export const ITEM_HEIGHT = scaleSizeH(LIST_ITEM_HEIGHT)
 
@@ -91,6 +91,7 @@ export default memo(
       ? String(txSongId) 
       : (item.meta as any).songmid || (item.meta as any).strMediaMid || (typeof item.id === 'string' && item.id.startsWith('tx_') ? item.id.slice(3) : item.id)
     const isTxLiked = useIsTxLiked(txSongMid)
+    const isKgLiked = useIsKgLiked(item.meta.songId)
 
     const moreButtonRef = useRef<TouchableOpacity>(null)
     const handleShowMenu = () => {
@@ -106,14 +107,16 @@ export default memo(
       }
     }
 
-    const showLikeButton = item.source === 'wy' || item.source === 'tx'
-    const isLiked = item.source === 'wy' ? isWyLiked : item.source === 'tx' ? isTxLiked : false
+    const showLikeButton = item.source === 'wy' || item.source === 'tx' || item.source === 'kg'
+    const isLiked = item.source === 'wy' ? isWyLiked : item.source === 'tx' ? isTxLiked : item.source === 'kg' ? isKgLiked : false
 
     const handleLike = () => {
       if (item.source === 'wy') {
         handleLikeMusic(item)
       } else if (item.source === 'tx') {
         handleTxLikeMusic(item)
+      } else if (item.source === 'kg') {
+        handleKgLikeMusic(item)
       }
     }
 

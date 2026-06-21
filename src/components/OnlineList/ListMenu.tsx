@@ -101,6 +101,16 @@ export default forwardRef<ListMenuType, ListMenuProps>((props: ListMenuProps, re
       }
     }
 
+    if (selectInfo.musicInfo?.source === 'kg') {
+      wyMenuItems.push(
+        { action: 'artistDetail', label: t('artist_detail') },
+        { action: 'albumDetail', label: t('album_detail') },
+      );
+      if (menuSetting.playMV) {
+        wyMenuItems.push({ action: 'playMv', label: '播放MV' });
+      }
+    }
+
     const remainingMenu = []
     if (menuSetting.songDetail)
       remainingMenu.push({ action: 'musicSourceDetail', label: t('music_source_detail') })

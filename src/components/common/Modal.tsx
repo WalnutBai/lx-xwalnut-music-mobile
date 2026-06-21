@@ -92,15 +92,14 @@ export default forwardRef<ModalType, ModalProps>(
         onRequestClose={handleRequestClose}
         {...props}
       >
-        {/* <StatusBar /> */}
-        {/* <View style={{ flex: 1, paddingTop: statusBarPadding ? StatusBar.currentHeight : 0 }}> */}
-        <TouchableWithoutFeedback
-          style={{ flex: 1, paddingTop: statusBarPadding ? statusBarHeight : 0 }}
-          onPress={handleBgClose}
-        >
-          <View style={{ flex: 1, backgroundColor: bgColor }}>{memoChildren}</View>
-        </TouchableWithoutFeedback>
-        {/* </View> */}
+        <View style={{ flex: 1, paddingTop: statusBarPadding ? statusBarHeight : 0, backgroundColor: bgColor }}>
+          <TouchableWithoutFeedback onPress={handleBgClose} style={{ flex: 1 }}>
+            <View style={{ flex: 1 }} />
+          </TouchableWithoutFeedback>
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+             {memoChildren}
+           </View>
+        </View>
       </Modal>
     )
   }

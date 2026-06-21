@@ -154,6 +154,24 @@ export const removeTxSubscribedPlaylist = (id: string | number) => {
   global.state_event.txSubscribedPlaylistsChanged()
 }
 
+// 酷狗音乐喜欢歌曲
+export const setKgLikedSongs = (ids: (string | number)[]) => {
+  state.kg_liked_song_ids = new Set(ids.map(String))
+  global.state_event.kgLikedListChanged()
+}
+export const addKgLikedSong = (id: string | number) => {
+  const strId = String(id)
+  if (state.kg_liked_song_ids.has(strId)) return
+  state.kg_liked_song_ids.add(strId)
+  global.state_event.kgLikedListChanged()
+}
+export const removeKgLikedSong = (id: string | number) => {
+  const strId = String(id)
+  if (!state.kg_liked_song_ids.has(strId)) return
+  state.kg_liked_song_ids.delete(strId)
+  global.state_event.kgLikedListChanged()
+}
+
 // 酷狗音乐歌单列表
 export const setKgSubscribedPlaylists = (playlists: KgPlaylistInfo[]) => {
   state.kg_subscribed_playlists = playlists

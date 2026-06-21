@@ -55,7 +55,7 @@ export default memo(({ artist, onFollow, componentId }: Props) => {
         removeWyFollowedArtist(artist.id)
       }
     }).catch((err: any) => {
-      toast(`操作失败: ${err.message}`)
+      toast(`操作失败: ${err.message}，可能是Cookie已失效，请重新登录`)
     })
   }
 
@@ -91,20 +91,33 @@ export default memo(({ artist, onFollow, componentId }: Props) => {
               </View>
             )}
 
+            {(artist.albumSize > 0 || artist.songNum > 0) && (
+              <View style={styles.statsContainer}>
+                {artist.songNum > 0 && (
+                  <Text size={11} color="rgba(255,255,255,0.7)">歌曲: {artist.songNum}</Text>
+                )}
+                {artist.albumSize > 0 && (
+                  <Text size={11} color="rgba(255,255,255,0.7)" style={{ marginLeft: artist.songNum > 0 ? 10 : 0 }}>专辑: {artist.albumSize}</Text>
+                )}
+              </View>
+            )}
+
           </View>
-          {artist.source !== 'tx' && (
+          {artist?.source !== 'tx' && artist?.source !== 'kg' && (
             <TouchableOpacity style={styles.followButton} onPress={toggleFollow}>
               <Icon name={isFollowed ? 'love-filled' : 'love'} color={isFollowed ? theme['c-liked'] : '#fff'} size={18} />
             </TouchableOpacity>
           )}
-          <TouchableOpacity
-            activeOpacity={0.82}
-            style={styles.similarButton}
-            onPress={() => similarArtistsModalRef.current?.show({ id: artist.mid || artist.id, name: artistName, source: artist.source })}
-          >
-            <Text size={12} color="#fff" numberOfLines={1}>相似歌手</Text>
-            <Icon name="chevron-right" color="#fff" size={12} />
-          </TouchableOpacity>
+          {artist?.source !== 'kg' && (
+            <TouchableOpacity
+              activeOpacity={0.82}
+              style={styles.similarButton}
+              onPress={() => similarArtistsModalRef.current?.show({ id: artist?.mid || artist?.id, name: artistName, source: artist?.source })}
+            >
+              <Text size={12} color="#fff" numberOfLines={1}>相似歌手</Text>
+              <Icon name="chevron-right" color="#fff" size={12} />
+            </TouchableOpacity>
+          )}
         </View>
       </ImageBackground>
       <ImagePreviewModal
@@ -150,6 +163,10 @@ const styles = createStyle({
   descWrapper: {
     flexShrink: 1,
     maxHeight: 90,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    marginTop: 4,
   },
   followButton: {
     paddingHorizontal: 15,

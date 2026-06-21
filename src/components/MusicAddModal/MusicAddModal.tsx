@@ -265,7 +265,7 @@ export default forwardRef<MusicAddModalType, MusicAddModalProps>(({ onAdded }, r
 
       // 获取酷狗 cookie
       if (!kgCookie) {
-        toast('请先登录酷狗音乐')
+        toast('请先登录酷狗音乐，Cookie可能已失效')
         return;
       }
 
@@ -274,49 +274,22 @@ export default forwardRef<MusicAddModalType, MusicAddModalProps>(({ onAdded }, r
       const songHash = (musicInfo.meta as any)?.hash || '';
       const albumId = (musicInfo.meta as any)?.albumId || 0;
       const mixsongid = Number((musicInfo.meta as any)?.mixSongId) || Number(musicInfo.meta?.songId) || 0;
-      const fileId = (musicInfo.meta as any)?.fileId || (musicInfo.meta as any)?.album_audio_id || 0;
 
       if (isMove) {
-        // 移动：先添加到目标歌单，再从源歌单删除
-        log.info('[MusicAddModal] 酷狗歌单移动开始', {
-          fromListId: selectInfo.listId,
-          toListId,
-          songName,
-          songHash,
-        })
-
-        // 源歌单ID需要从歌单列表中查找listid
-        const fromListIdStr = String(selectInfo.listId).replace('kg__', '');
-        const fromListId = Number(fromListIdStr);
-
+        // 移动：添加到目标歌单
         addKgSongToPlaylist(kgCookie, toListId, {
           name: songName,
           hash: songHash,
           album_id: albumId,
           mixsongid,
-        }).then((addResult) => {
-          if (addResult.success) {
-            // 添加成功后，从源歌单删除
-            if (fileId && fromListId) {
-              return removeKgSongsFromPlaylist(kgCookie, fromListId, [fileId])
-            }
-            return { success: true, message: '跳过删除（无fileId）' }
-          } else {
-            throw new Error(addResult.message)
-          }
-        }).then((removeResult) => {
-          if (removeResult?.success !== false) {
+        }).then((result) => {
+          if (result.success) {
             onAdded?.()
             toast(t('list_edit_action_tip_move_success'))
-            log.info('[MusicAddModal] 酷狗歌单移动成功', { fromListId, toListId, songName })
           } else {
-            log.error('[MusicAddModal] 酷狗歌单移动-删除失败', { error: removeResult?.message })
-            toast('移动成功但删除失败: ' + (removeResult?.message || ''))
+            toast(result.message || t('list_edit_action_tip_move_failed'))
           }
         }).catch((err) => {
-          log.error('[MusicAddModal] 酷狗歌单移动失败', {
-            error: err.message || err,
-          })
           toast(err.message || t('list_edit_action_tip_move_failed'))
         })
       } else {

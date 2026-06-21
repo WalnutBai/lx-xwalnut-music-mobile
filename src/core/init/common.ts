@@ -5,7 +5,8 @@ import { prefetch } from '@/components/common/ImageBackground'
 import { setBgPic } from '@/core/common'
 import wyUserApi from '@/utils/musicSdk/wy/user';
 import txUserApi from '@/utils/musicSdk/tx/user';
-import { setWyFollowedArtists, setWyLikedSongs, setWySubscribedAlbums, setTxLikedSongs } from '@/store/user/action';
+import { setWyFollowedArtists, setWyLikedSongs, setWySubscribedAlbums, setTxLikedSongs, setKgLikedSongs } from '@/store/user/action';
+import { getUserPlaylists, getPlaylistSongs } from '@/utils/kugouApi';
 import { toast } from '@/utils/tools';
 
 // const handleUpdateSourceNmaes = () => {
@@ -126,6 +127,59 @@ export default async (setting: LX.AppSetting) => {
     }
   };
 
+  const handleKgCookieUpdate = async (keys: Array<keyof LX.AppSetting>, setting: Partial<LX.AppSetting>) => {
+    if (!keys.includes('common.kg_cookie')) return;
+    const cookie = setting['common.kg_cookie'];
+    if (cookie) {
+      console.log('正在刷新酷狗音乐数据...');
+      try {
+        // 获取用户歌单列表，找到"我喜欢"歌单
+        const playlistsResult = await getUserPlaylists(cookie);
+        if (!playlistsResult.success || !playlistsResult.data) {
+          console.log('酷狗歌单获取失败');
+          return;
+        }
+
+        const favoritesPlaylist = playlistsResult.data.createdList.find((p: any) => p.isFavorites);
+        if (!favoritesPlaylist) {
+          console.log('未找到酷狗"我喜欢"歌单');
+          setKgLikedSongs([]);
+          return;
+        }
+
+        // 获取"我喜欢"歌单中的所有歌曲
+        const allLikedIds: string[] = [];
+        let page = 1;
+        const pageSize = 500;
+        let hasMore = true;
+
+        while (hasMore) {
+          const songsResult = await getPlaylistSongs(cookie, favoritesPlaylist.id, page, pageSize);
+          if (songsResult.success && songsResult.data?.list?.length) {
+            for (const song of songsResult.data.list) {
+              // 使用 songmid 或 hash 作为唯一标识
+              const songId = song.songmid || song.hash || song.audio_id;
+              if (songId) {
+                allLikedIds.push(String(songId));
+              }
+            }
+            hasMore = songsResult.data.list.length === pageSize;
+            page++;
+          } else {
+            hasMore = false;
+          }
+        }
+
+        setKgLikedSongs(allLikedIds);
+        console.log(`酷狗喜欢歌曲加载成功，共 ${allLikedIds.length} 首`);
+      } catch (err: any) {
+        toast(`酷狗数据获取失败: ${err.message}`);
+      }
+    } else {
+      setKgLikedSongs([]);
+    }
+  };
+
   const handleLogSettingUpdate = (keys: Array<keyof LX.AppSetting>, setting: Partial<LX.AppSetting>) => {
     if (keys.includes('common.isEnableLog')) {
       global.lx.isEnableLog = setting['common.isEnableLog']!
@@ -143,5 +197,6 @@ export default async (setting: LX.AppSetting) => {
   global.state_event.on('configUpdated', handleConfigUpdate)
   global.state_event.on('configUpdated', handleWyCookieUpdate);
   global.state_event.on('configUpdated', handleTxCookieUpdate);
+  global.state_event.on('configUpdated', handleKgCookieUpdate);
   global.state_event.on('configUpdated', handleLogSettingUpdate);
 }

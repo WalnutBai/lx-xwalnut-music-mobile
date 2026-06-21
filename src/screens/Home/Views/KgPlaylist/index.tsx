@@ -178,7 +178,7 @@ export default memo(() => {
         }).then(async (confirmed) => {
           if (!confirmed) return
           if (!kgCookie) {
-            toast('请先登录酷狗音乐')
+            toast('请先登录酷狗音乐，Cookie可能已失效')
             return
           }
           if (!item.listid) {
@@ -208,7 +208,7 @@ export default memo(() => {
       return
     }
     if (!kgCookie) {
-      toast('请先登录酷狗音乐')
+      toast('请先登录酷狗音乐，Cookie可能已失效')
       return
     }
 

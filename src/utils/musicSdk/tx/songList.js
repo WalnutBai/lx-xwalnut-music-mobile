@@ -231,7 +231,7 @@ export default {
           dirid: 0,
           tag: true,
           song_begin: 0,
-          song_num: 100,
+          song_num: 999999,
           userinfo: true,
           orderlist: true,
           onlysonglist: false,

@@ -56,6 +56,7 @@ export interface InitState {
   tx_liked_song_ids: Set<string>
   tx_subscribed_playlists: TxPlaylistInfo[]
   // 酷狗音乐
+  kg_liked_song_ids: Set<string>
   kg_subscribed_playlists: KgPlaylistInfo[]
 }
 const state: InitState = {
@@ -69,6 +70,7 @@ const state: InitState = {
   tx_liked_song_ids: new Set(),
   tx_subscribed_playlists: [],
   // 酷狗音乐
+  kg_liked_song_ids: new Set(),
   kg_subscribed_playlists: [],
 }
 

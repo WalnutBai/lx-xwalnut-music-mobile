@@ -487,10 +487,10 @@ export default {
       if (retCode === 1000 || retCode === 1001) {
         txLog.error('未登录或登录已过期')
         errorLog.error('[QQ音乐] 未登录或登录已过期，请更新QQ Cookie')
-        throw new Error('未登录或登录已过期，请更新QQ Cookie')
+        throw new Error('QQ音乐登录已过期，请重新登录QQ音乐')
       }
 
-      if (retCode !== 0) {
+      if (retCode !== 0 && retCode !== undefined) {
         const errorMsg = body?.req_0?.data?.retMsg || `添加歌曲失败，错误码: ${retCode}`
         txLog.error('添加歌曲失败', {
           retCode,
@@ -500,7 +500,12 @@ export default {
           songMids,
         })
         errorLog.error(`[QQ音乐] 添加歌曲失败: ${errorMsg}, 歌单ID: ${listId}, 歌曲数量: ${songMids.length}`)
-        throw new Error(errorMsg)
+        throw new Error(`${errorMsg}，可能是Cookie已失效，请重新登录QQ音乐`)
+      }
+
+      if (retCode === undefined) {
+        errorLog.error(`[QQ音乐] 添加歌曲失败: 返回数据异常, 歌单ID: ${listId}`)
+        throw new Error('添加歌曲失败，可能是Cookie已失效，请重新登录QQ音乐')
       }
 
       txLog.info('添加歌曲成功', {
@@ -1036,8 +1041,11 @@ export default {
       const body = await this.sendSignedRequest(payload)
 
       const retCode = body?.req_0?.data?.retCode
+      if (retCode === 1000 || retCode === 1001) {
+        throw new Error('QQ音乐登录已过期，请重新登录QQ音乐')
+      }
       if (retCode !== 0) {
-        throw new Error(body?.req_0?.data?.retMsg || `删除歌曲失败，错误码: ${retCode}`)
+        throw new Error(`${body?.req_0?.data?.retMsg || `删除歌曲失败，错误码: ${retCode}`}，可能是Cookie已失效，请重新登录QQ音乐`)
       }
 
       txLog.info('删除歌曲成功', { dirid, tid, songCount: songInfo.length })
@@ -1096,12 +1104,15 @@ export default {
       const body = await this.sendSignedRequest(payload)
 
       const retCode = body?.req_0?.data?.retCode
+      if (retCode === 1000 || retCode === 1001) {
+        throw new Error('QQ音乐登录已过期，请重新登录QQ音乐')
+      }
       if (retCode !== 0) {
         const retMsg = body?.req_0?.data?.retMsg
         if (retCode === undefined || retCode === null) {
-          throw new Error('删除歌单失败，Cookie无效或已过期，请重新设置')
+          throw new Error('删除歌单失败，Cookie无效或已过期，请重新登录QQ音乐')
         }
-        throw new Error(retMsg || `删除歌单失败，错误码: ${retCode}`)
+        throw new Error(`${retMsg || `删除歌单失败，错误码: ${retCode}`}，可能是Cookie已失效，请重新登录QQ音乐`)
       }
 
       txLog.info('删除歌单成功', { dirid })
@@ -1154,8 +1165,11 @@ export default {
       const body = await this.sendSignedRequest(payload)
 
       const retCode = body?.req_0?.data?.retCode
+      if (retCode === 1000 || retCode === 1001) {
+        throw new Error('QQ音乐登录已过期，请重新登录QQ音乐')
+      }
       if (retCode !== 0) {
-        throw new Error(body?.req_0?.data?.retMsg || `创建歌单失败，错误码: ${retCode}`)
+        throw new Error(`${body?.req_0?.data?.retMsg || `创建歌单失败，错误码: ${retCode}`}，可能是Cookie已失效，请重新登录QQ音乐`)
       }
 
       const newDirid = body?.req_0?.data?.dirid
@@ -1262,7 +1276,7 @@ export default {
   async likeSong(songMid: string, like: boolean): Promise<boolean> {
     const likedListId = await this.getLikedListId()
     if (!likedListId) {
-      throw new Error('未找到"我喜欢"歌单，请先登录QQ音乐')
+      throw new Error('未找到"我喜欢"歌单，可能是Cookie已失效，请重新登录QQ音乐')
     }
 
     if (like) {

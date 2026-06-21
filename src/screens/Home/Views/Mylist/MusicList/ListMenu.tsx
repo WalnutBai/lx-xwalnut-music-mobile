@@ -121,6 +121,14 @@ export default forwardRef<ListMenuType, ListMenuProps>((props, ref) => {
         }
       }
 
+      if (musicInfo.source === 'kg') {
+        menu.push({ action: 'artistDetail', label: t('artist_detail') })
+        menu.push({ action: 'albumDetail', label: t('album_detail') })
+        if (menuSetting.playMV) {
+          menu.push({ action: 'playMv', label: '播放MV' })
+        }
+      }
+
       if (menuSetting.dislike) menu.push({ action: 'dislike', disabled: hasDislike(musicInfo), label: t('dislike') })
       menu.push({ action: 'clearCache', label: t('clear_music_cache') })
       menu.push({ action: 'remove', label: t('delete') })

@@ -5,6 +5,7 @@ import Header from './Header';
 import SongList from './SongList';
 import wyApi from '@/utils/musicSdk/wy/artist';
 import txApi from '@/utils/musicSdk/tx/artist';
+import kgApi from '@/utils/musicSdk/kg/artist';
 import { toast } from '@/utils/tools';
 import {setComponentId, updateSetting} from '@/core/common';
 import PlayerBar from '@/components/player/PlayerBar';
@@ -21,6 +22,20 @@ import { log } from '@/utils/log'
 
 const SONG_LIMIT = 100;
 const ALBUM_LIMIT = 100;
+
+// 获取对应源的API
+const getApi = (source) => {
+  if (source === 'tx') return txApi
+  if (source === 'kg') return kgApi
+  return wyApi
+}
+
+// 获取歌手参数
+const getArtistParam = (artistInfo) => {
+  if (artistInfo.source === 'tx') return artistInfo.mid || artistInfo.id
+  if (artistInfo.source === 'kg') return artistInfo.id
+  return artistInfo.id
+}
 
 export default memo(({ componentId, artistInfo }: { componentId: string, artistInfo: { id: string, mid?: string, name: string, source?: string } }) => {
   log.info('[ArtistDetail] === 歌手详情页初始化 ===', {
@@ -84,8 +99,8 @@ export default memo(({ componentId, artistInfo }: { componentId: string, artistI
   useEffect(() => {
     setComponentId('ARTIST_DETAIL', componentId);
     componentIdRef.current = componentId;
-    const api = artistInfo.source === 'tx' ? txApi : wyApi
-    const artistParam = artistInfo.source === 'tx' ? (artistInfo.mid || artistInfo.id) : artistInfo.id
+    const api = getApi(artistInfo.source)
+    const artistParam = getArtistParam(artistInfo)
 
     log.info('[ArtistDetail] === 开始获取歌手详情 ===', {
       artistId: artistInfo.id,
@@ -93,7 +108,7 @@ export default memo(({ componentId, artistInfo }: { componentId: string, artistI
       artistParam,
       artistName: artistInfo.name,
       artistSource: artistInfo.source,
-      api: artistInfo.source === 'tx' ? 'txApi' : 'wyApi',
+      api: artistInfo.source,
     })
 
     const cachedDetail = getArtistDetailCache(artistParam);
@@ -123,8 +138,8 @@ export default memo(({ componentId, artistInfo }: { componentId: string, artistI
   }, [componentId, artistInfo.id, artistInfo.source]);
 
   const loadSongs = useCallback((sort, page, isRefresh = false) => {
-    const currentApi = artistInfo.source === 'tx' ? txApi : wyApi
-    const currentArtistParam = artistInfo.source === 'tx' ? (artistInfo.mid || artistInfo.id) : artistInfo.id
+    const currentApi = getApi(artistInfo.source)
+    const currentArtistParam = getArtistParam(artistInfo)
 
     log.info('[ArtistDetail] === loadSongs 被调用 ===', {
       artistId: artistInfo.id,
@@ -199,8 +214,8 @@ export default memo(({ componentId, artistInfo }: { componentId: string, artistI
   }, [artistInfo.id, artistInfo.source]);
 
   const loadAlbums = useCallback((page, isRefresh = false) => {
-    const currentApi = artistInfo.source === 'tx' ? txApi : wyApi
-    const currentArtistParam = artistInfo.source === 'tx' ? (artistInfo.mid || artistInfo.id) : artistInfo.id
+    const currentApi = getApi(artistInfo.source)
+    const currentArtistParam = getArtistParam(artistInfo)
 
     log.info('[ArtistDetail] === loadAlbums 被调用 ===', {
       artistId: artistInfo.id,
@@ -310,8 +325,8 @@ export default memo(({ componentId, artistInfo }: { componentId: string, artistI
   };
 
   const handleRefresh = useCallback(() => {
-    const refreshApi = artistInfo.source === 'tx' ? txApi : wyApi
-    const refreshParam = artistInfo.source === 'tx' ? (artistInfo.mid || artistInfo.id) : artistInfo.id
+    const refreshApi = getApi(artistInfo.source)
+    const refreshParam = getArtistParam(artistInfo)
 
     clearArtistCache(refreshParam);
 

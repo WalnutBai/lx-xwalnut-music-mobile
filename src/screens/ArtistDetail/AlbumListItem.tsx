@@ -60,7 +60,7 @@ export default memo(({ componentId, item, width, viewMode }: { componentId: stri
         removeWySubscribedAlbum(item.id)
       }
     }).catch(err => {
-      toast(`操作失败: ${err.message}`)
+      toast(`操作失败: ${err.message}，可能是Cookie已失效，请重新登录`)
     })
   }
 
@@ -75,9 +75,11 @@ export default memo(({ componentId, item, width, viewMode }: { componentId: stri
             {item.size} 首
           </Text>
         </View>
-        <TouchableOpacity style={listStyles.likeButton} onPress={toggleSubscribe}>
-          <Icon name={isSubscribed ? 'love-filled' : 'love'} color={isSubscribed ? theme['c-liked'] : theme['c-font-label']} size={18} />
-        </TouchableOpacity>
+        {item.source !== 'kg' && (
+          <TouchableOpacity style={listStyles.likeButton} onPress={toggleSubscribe}>
+            <Icon name={isSubscribed ? 'love-filled' : 'love'} color={isSubscribed ? theme['c-liked'] : theme['c-font-label']} size={18} />
+          </TouchableOpacity>
+        )}
       </TouchableOpacity>
     )
   }
@@ -93,9 +95,11 @@ export default memo(({ componentId, item, width, viewMode }: { componentId: stri
             {item.size} 首
           </Text>
         </View>
-        <TouchableOpacity style={gridStyles.likeButton} onPress={toggleSubscribe}>
-          <Icon name={isSubscribed ? 'love-filled' : 'love'} color={isSubscribed ? theme['c-liked'] : theme['c-font-label']} size={18} />
-        </TouchableOpacity>
+        {item.source !== 'kg' && (
+          <TouchableOpacity style={gridStyles.likeButton} onPress={toggleSubscribe}>
+            <Icon name={isSubscribed ? 'love-filled' : 'love'} color={isSubscribed ? theme['c-liked'] : theme['c-font-label']} size={18} />
+          </TouchableOpacity>
+        )}
       </View>
     </TouchableOpacity>
   )

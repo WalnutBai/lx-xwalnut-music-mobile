@@ -13,12 +13,13 @@ import { httpFetch } from '@/utils/request'
 import musicDetailApi from '@/utils/musicSdk/wy/musicDetail'
 import userState from '@/store/user/state'
 import {weapi} from "@/utils/musicSdk/wy/utils/crypto.js";
-import {addWyLikedSong, removeWyLikedSong, addTxLikedSong, removeTxLikedSong} from "@/store/user/action.ts";
+import {addWyLikedSong, removeWyLikedSong, addTxLikedSong, removeTxLikedSong, addKgLikedSong, removeKgLikedSong} from "@/store/user/action.ts";
 import {navigations} from "@/navigation";
 import commonState from '@/store/common/state'
 import wyApi from '@/utils/musicSdk/wy/user'
 import txApi from '@/utils/musicSdk/tx/user'
 import { log } from '@/utils/log'
+import { addSongToPlaylist, removeSongsFromPlaylist } from '@/utils/kugouApi'
 
 export const handleShowAlbumDetail = (componentId: string, musicInfo: LX.Music.MusicInfoOnline) => {
   const albumId = musicInfo.meta.albumId
@@ -49,7 +50,7 @@ export const handleShowArtistDetail = async (componentId: string, musicInfo: LX.
     timestamp: new Date().toISOString(),
   })
 
-  if (musicInfo.source !== 'wy' && musicInfo.source !== 'tx') {
+  if (musicInfo.source !== 'wy' && musicInfo.source !== 'tx' && musicInfo.source !== 'kg') {
     log.info('[handleShowArtistDetail] 暂不支持该音源', { source: musicInfo.source })
     toast('暂不支持该音源查看歌手详情')
     return
@@ -187,6 +188,105 @@ export const handleTxLikeMusic = async (musicInfo: LX.Music.MusicInfoOnline) => 
     }
   } catch (error: any) {
     toast(`操作失败: ${error.message}`);
+  }
+}
+
+export const handleKgLikeMusic = async (musicInfo: LX.Music.MusicInfoOnline) => {
+  const cookie = settingState.setting['common.kg_cookie']
+  if (!cookie) {
+    toast('请先设置酷狗音乐 Cookie')
+    return
+  }
+  if (musicInfo.source !== 'kg') {
+    toast('非酷狗音源无法执行此操作')
+    return
+  }
+
+  const songId = musicInfo.meta.songId
+  const isLiked = userState.kg_liked_song_ids.has(String(songId))
+  const like = !isLiked
+
+  try {
+    if (like) {
+      // 获取用户的歌单列表，找到"我喜欢"歌单（is_def === 2）
+      const { getUserPlaylists } = await import('@/utils/kugouApi')
+      const playlistsResult = await getUserPlaylists(cookie)
+      if (!playlistsResult.success || !playlistsResult.data) {
+        toast('获取歌单列表失败')
+        return
+      }
+      
+      const favoritesPlaylist = playlistsResult.data.createdList.find((p: any) => p.isFavorites)
+      if (!favoritesPlaylist || !favoritesPlaylist.listid) {
+        toast('未找到"我喜欢"歌单，可能是Cookie已失效，请重新登录')
+        return
+      }
+      
+      // 提取歌曲信息
+      const meta = musicInfo.meta as any
+      const songInfo = {
+        name: musicInfo.name || '',
+        hash: meta.hash || meta.songmid || songId,
+        album_id: meta.albumId ? Number(meta.albumId) : 0,
+        mixsongid: meta.mixsongid ? Number(meta.mixsongid) : 0,
+      }
+      
+      const result = await addSongToPlaylist(cookie, favoritesPlaylist.listid, songInfo)
+      if (result.success) {
+        toast('喜欢成功')
+        addKgLikedSong(songId)
+      } else {
+        toast(`操作失败: ${result.message}，可能是Cookie已失效，请重新登录`)
+      }
+    } else {
+      // 取消喜欢 - 获取"我喜欢"歌单的歌曲列表，找到对应的歌曲并移除
+      const { getUserPlaylists, getPlaylistSongs } = await import('@/utils/kugouApi')
+      const playlistsResult = await getUserPlaylists(cookie)
+      if (!playlistsResult.success || !playlistsResult.data) {
+        toast('获取歌单列表失败，可能是Cookie已失效，请重新登录')
+        return
+      }
+      
+      const favoritesPlaylist = playlistsResult.data.createdList.find((p: any) => p.isFavorites)
+      if (!favoritesPlaylist || !favoritesPlaylist.listid) {
+        toast('未找到"我喜欢"歌单，可能是Cookie已失效，请重新登录')
+        return
+      }
+      
+      // 获取歌单中的歌曲，找到对应的fileid
+      const songsResult = await getPlaylistSongs(cookie, favoritesPlaylist.id, 1, 500)
+      if (!songsResult.success || !songsResult.data?.list) {
+        toast('获取歌单歌曲失败')
+        return
+      }
+      
+      const meta = musicInfo.meta as any
+      const songHash = (meta.hash || meta.songmid || songId).toString().toLowerCase()
+      console.log('[KgLike] 查找歌曲:', { songHash, totalSongs: songsResult.data.list.length })
+      
+      const targetSong = songsResult.data.list.find((s: any) => {
+        const sSongmid = (s.songmid || '').toString().toLowerCase()
+        const sHash = (s.hash || '').toString().toLowerCase()
+        return sSongmid === songHash || sHash === songHash || 
+               sSongmid.includes(songHash) || songHash.includes(sSongmid)
+      })
+      
+      console.log('[KgLike] 找到歌曲:', { found: !!targetSong, fileId: targetSong?.fileId, listid: favoritesPlaylist.listid })
+      
+      if (targetSong && targetSong.fileId && targetSong.fileId !== 0) {
+        const removeResult = await removeSongsFromPlaylist(cookie, favoritesPlaylist.listid, [Number(targetSong.fileId)])
+        if (removeResult.success) {
+          toast('取消喜欢成功')
+          removeKgLikedSong(songId)
+        } else {
+          toast(`操作失败: ${removeResult.message}，可能是Cookie已失效，请重新登录`)
+        }
+      } else {
+        toast('未找到歌曲信息，可能是Cookie已失效，请重新登录')
+      }
+    }
+  } catch (error: any) {
+    toast(`操作失败: ${error.message}，可能是Cookie已失效，请重新登录`)
   }
 }
 

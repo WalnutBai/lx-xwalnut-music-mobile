@@ -85,7 +85,7 @@ export default {
     try {
       const { body, statusCode } = await requestObj.promise;
       if (statusCode !== 200 || body.code !== 200) {
-        throw new Error((body && body.message) || '操作失败');
+        throw new Error((body && body.message) || '操作失败，可能是Cookie已失效，请重新登录');
       }
       return body;
     } catch (error) {
@@ -436,7 +436,7 @@ export default {
     try {
       const { body, statusCode } = await requestObj.promise
       if (statusCode !== 200 || body.code !== 200) {
-        throw new Error((body && body.message) || '操作失败')
+        throw new Error((body && body.message) || '操作失败，可能是Cookie已失效，请重新登录')
       }
       return body
     } catch (error) {
@@ -473,7 +473,7 @@ export default {
     try {
       const { body, statusCode } = await requestObj.promise;
       if (statusCode !== 200 || body.code !== 200) {
-        throw new Error((body && body.message) || '操作失败');
+        throw new Error((body && body.message) || '操作失败，可能是Cookie已失效，请重新登录');
       }
       return body;
     } catch (error) {
@@ -513,7 +513,7 @@ export default {
     try {
       const { body, statusCode } = await requestObj.promise;
       if (statusCode !== 200 || body.code !== 200) {
-        throw new Error((body && body.message) || '操作失败');
+        throw new Error((body && body.message) || '操作失败，可能是Cookie已失效，请重新登录');
       }
       return body;
     } catch (error) {

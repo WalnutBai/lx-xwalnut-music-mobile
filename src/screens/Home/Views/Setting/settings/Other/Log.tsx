@@ -1,5 +1,5 @@
 import { memo, useRef, useState, useEffect } from 'react'
-import { View, Clipboard, Text as RNText, FlatList, Dimensions } from 'react-native'
+import { View, Clipboard, Text as RNText, ScrollView, Dimensions } from 'react-native'
 import { getLogs, clearLogs } from '@/utils/log'
 
 import SubTitle from '../../components/SubTitle'
@@ -62,8 +62,8 @@ export default memo(() => {
     })
   }
 
-  const renderLogItem = ({ item }: { item: string }) => (
-    <RNText selectable={true} style={{ fontSize: 13, lineHeight: 18, paddingVertical: 4 }}>
+  const renderLogItem = (item: string, index: number) => (
+    <RNText key={index} selectable={true} style={{ fontSize: 13, lineHeight: 18, paddingVertical: 4 }}>
       {item}
     </RNText>
   )
@@ -196,22 +196,16 @@ export default memo(() => {
         onMiddle={handleCopyAll}
         showMiddle={logLines.length > 0}
       >
-        <View style={styles.renameContent} onStartShouldSetResponder={() => true}>
+        <View style={styles.renameContent}>
           {logLines.length > 0 ? (
-            <FlatList
-              data={logLines}
-              renderItem={renderLogItem}
-              keyExtractor={(_, index) => String(index)}
-              initialNumToRender={20}
-              maxToRenderPerBatch={30}
-              windowSize={10}
-              style={{ maxHeight: LIST_MAX_HEIGHT }}
-              ListHeaderComponent={isTruncated ? (
+            <>
+              {isTruncated ? (
                 <Text style={{ color: 'orange', paddingVertical: 4 }} size={13}>
                   {t('setting_other_log_tip_truncated', { num: maxLogLines })}
                 </Text>
               ) : null}
-            />
+              {logLines.map((item, index) => renderLogItem(item, index))}
+            </>
           ) : (
             <Text size={13}>{t('setting_other_log_tip_null')}</Text>
           )}

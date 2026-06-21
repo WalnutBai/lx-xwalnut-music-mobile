@@ -832,6 +832,7 @@ export default memo(() => {
         data={filteredSongs}
         renderItem={renderSong}
         keyExtractor={item => item.id}
+        style={{ flex: 1 }}
         getItemLayout={(data, index) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index })}
         onScrollToIndexFailed={(info) => {
           listRef.current?.scrollToOffset({

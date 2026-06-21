@@ -68,6 +68,8 @@ export default forwardRef<PlayDetailMenuType, PlayDetailMenuProps>((props, ref) 
         const songMid = (selectInfo.musicInfo.meta as any).songmid || (selectInfo.musicInfo.meta as any).strMediaMid || selectInfo.musicInfo.id
         const likeKey = songId && /^\d+$/.test(String(songId)) ? String(songId) : songMid
         setIsLiked(userState.tx_liked_song_ids.has(likeKey));
+      } else if (selectInfo.musicInfo.source === 'kg') {
+        setIsLiked(userState.kg_liked_song_ids.has(String(selectInfo.musicInfo.meta.songId)));
       }
       if (visible) {
         menuRef.current?.show(position);
@@ -104,6 +106,15 @@ export default forwardRef<PlayDetailMenuType, PlayDetailMenuProps>((props, ref) 
       menuItems.push({ action: 'albumDetail', label: t('album_detail') });
       menuItems.push({ action: 'similarSongs', label: '相似歌曲' });
       if (musicInfo.meta.vid && menuSetting.playMV) {
+        menuItems.push({ action: 'playMv', label: '播放MV' })
+      }
+    }
+
+    if (musicInfo?.source === 'kg') {
+      menuItems.push({ action: 'like', label: renderLikeLabel(isLiked) })
+      menuItems.push({ action: 'artistDetail', label: t('artist_detail') });
+      menuItems.push({ action: 'albumDetail', label: t('album_detail') });
+      if (menuSetting.playMV) {
         menuItems.push({ action: 'playMv', label: '播放MV' })
       }
     }

@@ -15,6 +15,7 @@ import OneDrive from '../Views/OneDrive'
 import WebDAV from '../Views/WebDAV'
 import TXPlaylist from '../Views/TxPlaylist'
 import KgPlaylist from '../Views/KgPlaylist'
+import KgDailyRec from '../Views/KgDailyRec'
 
 const Main = () => {
   const [id, setId] = useState(commonState.navActiveId)
@@ -57,6 +58,8 @@ const Main = () => {
         return <TXPlaylist />
       case 'nav_kg_playlist':
         return <KgPlaylist />
+      case 'nav_kg_daily_rec':
+        return <KgDailyRec />
       case 'nav_love':
         return <Mylist />
       case 'nav_setting':

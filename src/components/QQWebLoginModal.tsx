@@ -98,7 +98,7 @@ const QQWebLoginModal = forwardRef<QQWebLoginModalType, object>((props, ref) => 
       console.log('QQ登录: CookieManager captured cookies:', cookieString);
 
       if (!cookieString || cookieString.length < 10) {
-        toast('未获取到Cookie，请先登录');
+        toast('未获取到Cookie，可能是Cookie已失效，请重新登录');
         return;
       }
 

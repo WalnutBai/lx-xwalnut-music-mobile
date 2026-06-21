@@ -31,7 +31,7 @@ export default ({ isEdit, onHide, playlistType }: { isEdit: boolean; onHide: () 
 
     if (playlistType === 'online') {
       if (!uid) {
-        toast('请先登录网易云音乐')
+        toast('请先登录网易云音乐，Cookie可能已失效')
         return
       }
       wyApi.createPlaylist(name).then(playlist => {

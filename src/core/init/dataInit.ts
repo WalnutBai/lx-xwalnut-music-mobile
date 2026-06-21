@@ -20,7 +20,8 @@ import {
   setWyUid,
   setTxLikedSongs,
   setTxSubscribedPlaylists,
-  setKgSubscribedPlaylists
+  setKgSubscribedPlaylists,
+  setKgLikedSongs
 } from '@/store/user/action.ts'
 import {getDownloadTasks} from "@/utils/data/download.ts";
 import downloadActions from '@/store/download/action';
@@ -140,7 +141,7 @@ export default async (appSetting: LX.AppSetting) => {
   const kg_cookie = appSetting['common.kg_cookie']
   if (kg_cookie) {
     bootLog('Kg playlists init...')
-    getKgUserPlaylists(kg_cookie).then(result => {
+    getKgUserPlaylists(kg_cookie).then(async result => {
       if (result.success && result.data) {
         const allPlaylists = [...(result.data.createdList || []), ...(result.data.collectedList || [])]
         const formattedPlaylists = allPlaylists.map((p: any) => ({
@@ -154,6 +155,40 @@ export default async (appSetting: LX.AppSetting) => {
         }))
         setKgSubscribedPlaylists(formattedPlaylists)
         bootLog('Kg playlists inited.')
+
+        // 获取"我喜欢"歌单中的歌曲ID列表
+        const favoritesPlaylist = result.data.createdList.find((p: any) => p.isFavorites)
+        if (favoritesPlaylist) {
+          bootLog('Kg like list init...')
+          try {
+            const { getPlaylistSongs } = await import('@/utils/kugouApi')
+            const allLikedIds: string[] = []
+            let page = 1
+            const pageSize = 500
+            let hasMore = true
+
+            while (hasMore) {
+              const songsResult = await getPlaylistSongs(kg_cookie, favoritesPlaylist.id, page, pageSize)
+              if (songsResult.success && songsResult.data?.list?.length) {
+                for (const song of songsResult.data.list) {
+                  const songId = song.songmid || song.hash || song.audio_id
+                  if (songId) {
+                    allLikedIds.push(String(songId))
+                  }
+                }
+                hasMore = songsResult.data.list.length === pageSize
+                page++
+              } else {
+                hasMore = false
+              }
+            }
+
+            setKgLikedSongs(allLikedIds)
+            bootLog(`Kg like list inited. (${allLikedIds.length} songs)`)
+          } catch (err: any) {
+            bootLog(`Kg like list init failed: ${err.message}`)
+          }
+        }
       }
     }).catch(err => {
       bootLog(`Kg playlists init failed: ${err.message}`)

@@ -157,6 +157,7 @@ export const filterData = async (rawList, options = {}) => {
         albumName: decodeName(item.album_info?.album_name || item.remark),
         albumId: item.album_info.album_id,
         songmid: item.audio_info.audio_id,
+        songId: item.audio_info.audio_id,
         source: 'kg',
         interval: options.fix
           ? formatPlayTime(parseInt(item.audio_info.timelength) / 1000)
@@ -165,9 +166,20 @@ export const filterData = async (rawList, options = {}) => {
         lrc: null,
         hash: item.audio_info.hash,
         otherSource: null,
+        mixSongId: item.audio_info.audio_group_id || item.audio_info.mixsongid || item.mixsongid || 0,
         types,
         _types,
         typeUrl: {},
+        meta: {
+          songId: item.audio_info.audio_id,
+          albumName: decodeName(item.album_info?.album_name || item.remark),
+          albumId: item.album_info.album_id,
+          picUrl: item.album_info?.sizable_cover?.replace('{size}', '480') ?? null,
+          qualitys: types,
+          _qualitys: _types,
+          hash: item.audio_info.hash,
+          mixSongId: item.audio_info.audio_group_id || item.audio_info.mixsongid || item.mixsongid || 0,
+        },
       }
     }
 
@@ -177,14 +189,26 @@ export const filterData = async (rawList, options = {}) => {
       albumName: decodeName(item.album_name || item.remark),
       albumId: item.album_id,
       songmid: item.audio_id,
+      songId: item.audio_id,
       source: 'kg',
       interval: options.fix ? formatPlayTime(item.duration / 1000) : formatPlayTime(item.duration),
       img: (item.album_sizable_cover || item.album_info?.sizable_cover || item.imgurl)?.replace('{size}', '480') ?? null,
       lrc: null,
       hash: item.hash,
+      mixSongId: item.audio_group_id || item.mixsongid || item.MixSongID || 0,
       types,
       _types,
       typeUrl: {},
+      meta: {
+        songId: item.audio_id,
+        albumName: decodeName(item.album_name || item.remark),
+        albumId: item.album_id,
+        picUrl: (item.album_sizable_cover || item.album_info?.sizable_cover || item.imgurl)?.replace('{size}', '480') ?? null,
+        qualitys: types,
+        _qualitys: _types,
+        hash: item.hash,
+        mixSongId: item.audio_group_id || item.mixsongid || item.MixSongID || 0,
+      },
     }
   })
 }

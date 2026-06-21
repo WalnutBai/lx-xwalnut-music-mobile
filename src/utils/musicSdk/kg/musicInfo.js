@@ -44,7 +44,7 @@ export const filterMusicInfoList = (rawList) => {
   let ids = new Set()
   let list = []
   rawList.forEach((item) => {
-    if (!item) return
+    if (!item || !item.audio_info) return
     if (ids.has(item.audio_info.audio_id)) return
     ids.add(item.audio_info.audio_id)
     const types = []
@@ -87,24 +87,37 @@ export const filterMusicInfoList = (rawList) => {
       albumName: decodeName(item.album_info.album_name),
       albumId: item.album_info.album_id,
       songmid: item.audio_info.audio_id,
+      songId: item.audio_info.audio_id,
       source: 'kg',
       interval: formatPlayTime(parseInt(item.audio_info.timelength) / 1000),
-      img: null,
+      img: item.album_info.sizable_cover ? item.album_info.sizable_cover.replace('{size}', '400') : null,
       lrc: null,
       hash: item.audio_info.hash,
       otherSource: null,
+      mixSongId: item.audio_info.audio_group_id || item.audio_info.mixsongid || item.mixsongid || 0,
       types,
       _types,
       typeUrl: {},
+      meta: {
+        songId: item.audio_info.audio_id,
+        albumName: decodeName(item.album_info.album_name),
+        albumId: item.album_info.album_id,
+        picUrl: item.album_info.sizable_cover ? item.album_info.sizable_cover.replace('{size}', '400') : null,
+        qualitys: types,
+        _qualitys: _types,
+        hash: item.audio_info.hash,
+        mixSongId: item.audio_info.audio_group_id || item.audio_info.mixsongid || item.mixsongid || 0,
+      },
     })
   })
   return list
 }
 
 export const getMusicInfos = async (hashs) => {
-  return filterMusicInfoList(
-    await Promise.all(createGetMusicInfosTask(hashs)).then((data) => data.flat())
-  )
+  const rawData = await Promise.all(createGetMusicInfosTask(hashs)).then((data) => data.flat())
+  // 过滤掉 undefined 和无效数据
+  const validData = rawData.filter(item => item && item.audio_info && item.audio_info.audio_id)
+  return filterMusicInfoList(validData)
 }
 
 export const getMusicInfoRaw = async (hash) => {

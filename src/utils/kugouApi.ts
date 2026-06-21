@@ -70,7 +70,7 @@ function generateMid(): string {
  * Android 版签名
  * 签名算法：MD5(salt + 排序后的参数 + data + salt)
  */
-function signAndroidParams(params: Record<string, any>, data?: string, onLog?: LogCallback): string {
+export function signAndroidParams(params: Record<string, any>, data?: string, onLog?: LogCallback): string {
   const sortedKeys = Object.keys(params).sort();
   const paramsString = sortedKeys
     .map((key) => {
@@ -97,7 +97,7 @@ function signAndroidParams(params: Record<string, any>, data?: string, onLog?: L
 /**
  * 生成请求头和默认参数
  */
-function generateHeadersAndParams(): { headers: Record<string, string>; defaultParams: Record<string, any> } {
+export function generateHeadersAndParams(): { headers: Record<string, string>; defaultParams: Record<string, any> } {
   const dfid = generateDeviceId();
   const mid = generateMid();
   const clienttime = Math.floor(Date.now() / 1000);
@@ -658,7 +658,7 @@ export async function getUserPlaylists(
   const token = cookieObj.token || cookieObj.t || ''
 
   if (!userid || !token) {
-    return { success: false, message: '缺少 userid 或 token，请先登录' }
+    return { success: false, message: '缺少 userid 或 token，Cookie可能已失效，请重新登录' }
   }
 
   log(`获取歌单: userid=${userid}`)
@@ -801,7 +801,7 @@ export async function subscribePlaylist(
   const token = cookieObj.token || cookieObj.t || ''
 
   if (!userid || !token) {
-    return { success: false, message: '缺少 userid 或 token，请先登录' }
+    return { success: false, message: '缺少 userid 或 token，Cookie可能已失效，请重新登录' }
   }
 
   const type = playlistInfo.type ?? 1
@@ -890,7 +890,7 @@ export async function unsubscribePlaylist(
   const token = cookieObj.token || cookieObj.t || ''
 
   if (!userid || !token) {
-    return { success: false, message: '缺少 userid 或 token，请先登录' }
+    return { success: false, message: '缺少 userid 或 token，Cookie可能已失效，请重新登录' }
   }
 
   log(`删除歌单: listid=${listid}`)
@@ -1015,7 +1015,7 @@ export async function removeSongsFromPlaylist(
   const token = cookieObj.token || cookieObj.t || ''
 
   if (!userid || !token) {
-    return { success: false, message: '缺少 userid 或 token，请先登录' }
+    return { success: false, message: '缺少 userid 或 token，Cookie可能已失效，请重新登录' }
   }
 
   log(`从歌单删除歌曲: listid=${listid}, fileids=${fileids.join(',')}`)
@@ -1099,7 +1099,7 @@ export async function addSongToPlaylist(
   const token = cookieObj.token || cookieObj.t || ''
 
   if (!userid || !token) {
-    return { success: false, message: '缺少 userid 或 token，请先登录' }
+    return { success: false, message: '缺少 userid 或 token，Cookie可能已失效，请重新登录' }
   }
 
   log(`添加歌曲到歌单: listid=${listid}, song=${songInfo.name}`)

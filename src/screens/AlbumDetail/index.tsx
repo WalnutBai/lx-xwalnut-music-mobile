@@ -5,6 +5,7 @@ import Header from './Header'
 import OnlineList, { type OnlineListType } from '@/components/OnlineList'
 import wyApi from '@/utils/musicSdk/wy/album'
 import txApi from '@/utils/musicSdk/tx/album'
+import kgApi from '@/utils/musicSdk/kg/album'
 import { toast } from '@/utils/tools'
 import { setComponentId } from '@/core/common'
 import PlayerBar from '@/components/player/PlayerBar'
@@ -16,6 +17,13 @@ import playerState from '@/store/player/state'
 import listState from '@/store/list/state'
 import {usePlayerMusicInfo} from "@/store/player/hook.ts";
 import { log } from '@/utils/log'
+
+// 获取对应源的API
+const getApi = (source) => {
+  if (source === 'tx') return txApi
+  if (source === 'kg') return kgApi
+  return wyApi
+}
 
 export default memo(({ componentId, albumInfo }: { componentId: string; albumInfo: any }) => {
   log.info('[AlbumDetail] === 专辑详情页初始化 ===', {
@@ -59,14 +67,14 @@ export default memo(({ componentId, albumInfo }: { componentId: string; albumInf
     log.info('[AlbumDetail] === 设置列表状态为loading ===')
     listRef.current?.setStatus('loading');
     
-    const api = albumInfo.source === 'tx' ? txApi : wyApi
+    const api = getApi(albumInfo.source)
     const albumParam = albumInfo.source === 'tx' ? albumInfo.mid : albumInfo.id
     
     log.info('[AlbumDetail] === 调用API获取专辑详情 ===', {
       albumId: albumInfo.id,
       albumMid: albumInfo.mid,
       albumSource: albumInfo.source,
-      api: albumInfo.source === 'tx' ? 'txApi' : 'wyApi',
+      api: albumInfo.source,
       albumParam,
     })
     
@@ -90,7 +98,7 @@ export default memo(({ componentId, albumInfo }: { componentId: string; albumInf
     })
     listRef.current?.setStatus('refreshing');
     
-    const refreshApi = albumInfo.source === 'tx' ? txApi : wyApi
+    const refreshApi = getApi(albumInfo.source)
     const refreshParam = albumInfo.source === 'tx' ? albumInfo.mid : albumInfo.id
     
     refreshApi.getAlbum(refreshParam).then(data => {

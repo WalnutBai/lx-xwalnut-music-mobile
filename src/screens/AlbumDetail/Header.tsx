@@ -64,7 +64,7 @@ export default memo(({ albumInfo, componentId }: Props) => {
         removeWySubscribedAlbum(albumInfo.id);
       }
     }).catch((err: any) => {
-      toast(`操作失败: ${err.message}`);
+      toast(`操作失败: ${err.message}，可能是Cookie已失效，请重新登录`);
     });
   };
 
@@ -90,7 +90,7 @@ export default memo(({ albumInfo, componentId }: Props) => {
             {albumInfo.publishTime ? `${dateFormat(albumInfo.publishTime, 'Y.M.D') || albumInfo.publishTime} • ` : ''}{albumInfo.size || albumInfo.total} 首
           </Text>
         </View>
-        {albumInfo.source !== 'tx' && (
+        {albumInfo.source !== 'tx' && albumInfo.source !== 'kg' && (
           <TouchableOpacity style={styles.followButton} onPress={toggleSubscribe}>
             <Icon name={isSubscribed ? 'love-filled' : 'love'} color={isSubscribed ? theme['c-liked'] : '#fff'} size={18} />
           </TouchableOpacity>

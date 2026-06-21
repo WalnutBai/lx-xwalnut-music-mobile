@@ -23,6 +23,8 @@ import ListMenu, { type ListMenuType, type Position, type SelectInfo } from '@/c
 import {
   handleDislikeMusic,
   handleLikeMusic,
+  handleTxLikeMusic,
+  handleKgLikeMusic,
   handleShowAlbumDetail,
   handleShowArtistDetail,
   handleShowMusicSourceDetail,
@@ -33,6 +35,7 @@ import commonState from '@/store/common/state';
 import SimilarSongsModal, { type SimilarSongsModalType } from '@/components/SimilarSongsModal'
 import { getMvUrl as getWyMvUrl } from '@/utils/musicSdk/wy/mv.js'
 import { getMvUrl as getTxMvUrl } from '@/utils/musicSdk/tx/mv.js'
+import { getMvUrl as getKgMvUrl } from '@/utils/musicSdk/kg/mv.js'
 import { isOneDriveMusicInfo } from '@/core/oneDrive/utils'
 
 export interface PlayerPlaylistType {
@@ -220,6 +223,10 @@ export default forwardRef<PlayerPlaylistType, {}>((props, ref) => {
   const onLike = (info: SelectInfo) => {
     if (info.musicInfo.source === 'wy') {
       handleLikeMusic(info.musicInfo as LX.Music.MusicInfoOnline);
+    } else if (info.musicInfo.source === 'tx') {
+      handleTxLikeMusic(info.musicInfo as LX.Music.MusicInfoOnline);
+    } else if (info.musicInfo.source === 'kg') {
+      handleKgLikeMusic(info.musicInfo as LX.Music.MusicInfoOnline);
     }
   };
 
@@ -232,25 +239,63 @@ export default forwardRef<PlayerPlaylistType, {}>((props, ref) => {
 
   const onPlayMv = (info: SelectInfo) => {
     const musicInfo = info.musicInfo as LX.Music.MusicInfoOnline
+    console.log('[MV] 点击播放MV, source:', musicInfo.source, 'musicInfo:', musicInfo)
+    
     if (musicInfo.source === 'wy') {
       const mvId = musicInfo.meta.mv
-      if (!mvId) return
+      if (!mvId) {
+        console.log('[MV] 网易云: 无MV ID')
+        return
+      }
 
+      console.log('[MV] 网易云: 获取MV URL, mvId:', mvId)
       panelRef.current?.setVisible(false)
       getWyMvUrl(mvId).then(data => {
+        console.log('[MV] 网易云: 获取MV URL成功:', data)
         global.app_event.showVideoPlayer(data.url)
       }).catch(err => {
+        console.error('[MV] 网易云: 获取MV失败:', err)
         toast(err.message || '获取MV失败')
       })
     } else if (musicInfo.source === 'tx') {
       const vid = musicInfo.meta.vid
-      if (!vid) return
+      if (!vid) {
+        console.log('[MV] QQ: 无VID')
+        return
+      }
 
+      console.log('[MV] QQ: 获取MV URL, vid:', vid)
       panelRef.current?.setVisible(false)
       getTxMvUrl(vid).then(data => {
+        console.log('[MV] QQ: 获取MV URL成功:', data)
         global.app_event.showVideoPlayer(data.url)
       }).catch(err => {
+        console.error('[MV] QQ: 获取MV失败:', err)
         toast(err.message || '获取MV失败')
+      })
+    } else if (musicInfo.source === 'kg') {
+      const mixSongId = musicInfo.meta.mixSongId || musicInfo.mixSongId
+      const songName = musicInfo.name
+      const singerName = musicInfo.singer
+      if (!mixSongId) {
+        console.log('[MV] 酷狗: 无mixSongId')
+        toast('无法获取歌曲ID')
+        return
+      }
+
+      console.log('[MV] 酷狗: 开始获取MV, mixSongId:', mixSongId, 'songName:', songName, 'singerName:', singerName)
+      panelRef.current?.setVisible(false)
+      getKgMvUrl(String(mixSongId), songName, singerName).then(data => {
+        console.log('[MV] 酷狗: 获取MV URL成功:', data)
+        if (data && data.url) {
+          global.app_event.showVideoPlayer(data.url)
+        } else {
+          console.log('[MV] 酷狗: 返回数据无URL:', data)
+          toast('获取MV链接失败')
+        }
+      }).catch(err => {
+        console.error('[MV] 酷狗: 获取MV失败:', err)
+        toast(err.message || '该歌曲暂无MV')
       })
     }
   }

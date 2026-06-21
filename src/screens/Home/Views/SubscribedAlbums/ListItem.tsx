@@ -78,7 +78,7 @@ export default memo(({ item, showSubscribeButton = false }: { item: any, showSub
         removeWySubscribedAlbum(item.id)
       }
     }).catch(err => {
-      toast(`操作失败: ${err.message}`)
+      toast(`操作失败: ${err.message}，可能是Cookie已失效，请重新登录`)
     })
   }, [isSubscribed, item])
 
@@ -91,7 +91,7 @@ export default memo(({ item, showSubscribeButton = false }: { item: any, showSub
         <Text size={12} color={theme['c-font-label']}>
           {item.size} 首</Text>
       </View>
-      {showSubscribeButton && item.source !== 'tx' && (
+      {showSubscribeButton && item.source !== 'tx' && item.source !== 'kg' && (
         <TouchableOpacity style={styles.subscribeButton} onPress={toggleSubscribe}>
           <Icon name={isSubscribed ? 'love-filled' : 'love'} color={isSubscribed ? theme['c-liked'] : theme['c-font-label']} size={20} />
         </TouchableOpacity>

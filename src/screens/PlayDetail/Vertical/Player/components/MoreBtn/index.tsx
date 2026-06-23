@@ -20,7 +20,6 @@ import {getMvUrl as getKgMvUrl} from "@/utils/musicSdk/kg/mv.js";
 import SimilarSongsModal, { type SimilarSongsModalType } from '@/components/SimilarSongsModal'
 import { isOneDriveMusicInfo } from '@/core/oneDrive/utils'
 import { usePlayMusicInfo } from '@/store/player/hook'
-import ClimaxBtn from './ClimaxBtn'
 
 
 export default memo(({ componentId }: { componentId: string }) => {
@@ -174,7 +173,6 @@ export default memo(({ componentId }: { componentId: string }) => {
   return (
     <>
       <View style={styles.container}>
-        <ClimaxBtn />
         <DesktopLyricBtn />
         <MusicAddBtn />
         <PlayModeBtn />

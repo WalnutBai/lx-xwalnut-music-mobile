@@ -1,8 +1,8 @@
 import { useTheme } from '@/store/theme/hook'
 import { BorderRadius } from '@/theme'
 import { createStyle } from '@/utils/tools'
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
-import { View, type ViewProps, Image as _Image, StyleSheet } from 'react-native'
+import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react'
+import { View, type ViewProps, Image as _Image, StyleSheet, AppState } from 'react-native'
 import FastImage, { type FastImageProps } from '@d11/react-native-fast-image'
 import Text from './Text'
 import { useLayout } from '@/utils/hooks'
@@ -36,13 +36,28 @@ const EmptyPic = memo(({ style, nativeID }: { style: ImageProps['style'], native
 
 const Image = memo(({ url, cache, resizeMode = FastImage.resizeMode.cover, style, onError, nativeID }: ImageProps) => {
   const [isError, setError] = useState(false)
+  const urlRef = useRef(url)
+  urlRef.current = url
+
   const handleError = useCallback(() => {
     setError(true)
-    onError?.(url!)
-  }, [onError, url])
+    onError?.(urlRef.current!)
+  }, [onError])
+
   useEffect(() => {
     setError(false)
   }, [url])
+
+  // 当应用从后台返回前台时，重置错误状态以重试加载图片
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active' && isError) {
+        setError(false)
+      }
+    })
+    return () => subscription.remove()
+  }, [isError])
+
   let uri = typeof url == 'number'
     ? _Image.resolveAssetSource(url).uri
     : url?.startsWith('/')

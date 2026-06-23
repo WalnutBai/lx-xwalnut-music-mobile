@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ScrollView, TouchableOpacity, View } from 'react-native'
 
 import Text from '@/components/common/Text'
@@ -11,6 +11,12 @@ import { useI18n } from '@/lang'
 import { createStyle } from '@/utils/tools'
 import { scaleSizeW, scaleSizeH } from '@/utils/pixelRatio'
 import {useWySubscribedPlaylists, useWyUid, useTxSubscribedPlaylists, useKgSubscribedPlaylists} from "@/store/user/hook.ts"
+import { setTxSubscribedPlaylists, setKgSubscribedPlaylists, setWySubscribedPlaylists } from '@/store/user/action'
+import wyUserApi from '@/utils/musicSdk/wy/user'
+import txUserApi from '@/utils/musicSdk/tx/user'
+import { getUserPlaylists as getKgUserPlaylists } from '@/utils/musicSdk/kg/utils/api'
+import settingState from '@/store/setting/state'
+import { log } from '@/utils/log'
 
 const styles = createStyle({
   list: {
@@ -81,6 +87,76 @@ export default ({
   const txPlaylists = useTxSubscribedPlaylists()
   const kgPlaylists = useKgSubscribedPlaylists()
   const uid = useWyUid()
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  // Req3: 切换标签时实时刷新在线歌单
+  const refreshOnlinePlaylists = useCallback(async (type: 'wy' | 'tx' | 'kg') => {
+    if (isRefreshing) return
+    setIsRefreshing(true)
+    try {
+      if (type === 'wy') {
+        const cookie = settingState.setting['common.wy_cookie']
+        if (!cookie) return
+        const wyUid = await wyUserApi.getUid(cookie)
+        if (!wyUid) return
+        const playlists = await wyUserApi.getUserPlaylists(wyUid, cookie)
+        const formatted = playlists.map((p: any) => ({
+          id: p.id,
+          userId: p.userId || p.creator?.userId,
+          name: p.name,
+          coverImgUrl: p.coverImgUrl || p.picUrl || '',
+          trackCount: p.trackCount || 0,
+          description: p.description || '',
+          creator: p.creator,
+        }))
+        setWySubscribedPlaylists(formatted)
+      } else if (type === 'tx') {
+        const cookie = settingState.setting['common.tx_cookie']
+        if (!cookie) return
+        const playlists = await txUserApi.getUserPlaylists()
+        const formatted = playlists.map((p: any) => ({
+          id: `tx__${p.id}`,
+          name: p.name,
+          cover: p.cover,
+          songCount: p.songCount,
+          creator: { nickname: 'QQ音乐' },
+          dirid: p.dirid,
+          tid: p.tid,
+          desc: p.desc,
+          isFavorites: p.isFavorites,
+          isCollected: p.isCollected,
+        }))
+        setTxSubscribedPlaylists(formatted)
+      } else if (type === 'kg') {
+        const cookie = settingState.setting['common.kg_cookie']
+        if (!cookie) return
+        const result = await getKgUserPlaylists(cookie)
+        if (result.success && result.data) {
+          const allPlaylists = [...(result.data.createdList || []), ...(result.data.collectedList || [])]
+          const formatted = allPlaylists.map((p: any) => ({
+            id: p.id || `kg_${p.listid}`,
+            listid: p.listid,
+            name: p.name,
+            cover: p.cover,
+            songCount: p.songCount,
+            desc: p.desc,
+            isCollected: p.isCollected || false,
+          }))
+          setKgSubscribedPlaylists(formatted)
+        }
+      }
+    } catch (err: any) {
+      log.warn('[MusicAddModal] 刷新歌单失败', { type, error: err.message })
+    } finally {
+      setIsRefreshing(false)
+    }
+  }, [isRefreshing])
+
+  useEffect(() => {
+    if (playlistType !== 'local') {
+      void refreshOnlinePlaylists(playlistType)
+    }
+  }, [playlistType])
 
   const allList = useMemo(() => {
     if (playlistType === 'wy') {
@@ -90,13 +166,16 @@ export default ({
       return txPlaylists
     }
     if (playlistType === 'kg') {
-      return kgPlaylists.map(p => ({
-        id: `kg__${p.listid}`,
-        listid: p.listid,
-        name: p.name,
-        avatar: p.cover,
-        songCount: p.songCount,
-      }))
+      // Req2: 过滤掉收藏的他人歌单，只保留用户自建歌单
+      return kgPlaylists
+        .filter(p => !p.isCollected)
+        .map(p => ({
+          id: `kg__${p.listid}`,
+          listid: p.listid,
+          name: p.name,
+          avatar: p.cover,
+          songCount: p.songCount,
+        }))
     }
     return localLists
   }, [playlistType, localLists, onlinePlaylists, uid, txPlaylists, kgPlaylists])
@@ -120,7 +199,7 @@ export default ({
             width={itemWidth}
           />
         ))}
-        <EditListItem itemWidth={itemWidth} playlistType={playlistType} />
+        {playlistType === 'local' && <EditListItem itemWidth={itemWidth} playlistType={playlistType} />}
       </View>
     </ScrollView>
   )

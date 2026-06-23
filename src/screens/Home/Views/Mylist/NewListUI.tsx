@@ -19,6 +19,7 @@ import { handleRemove, handleSync } from './MyList/listAction'
 import { LIST_IDS } from '@/config/constant'
 import { scaleSizeH } from '@/utils/pixelRatio'
 import Loading from '@/components/common/Loading'
+import { Navigation } from 'react-native-navigation'
 
 const CARD_HEIGHT = 90
 const LONG_PRESS_MS = 350
@@ -290,6 +291,7 @@ export default memo(() => {
   const [hasError, setHasError] = useState(false)
   const [showMusicList, setShowMusicList] = useState(false)
   const [isTouchingDragHandle, setIsTouchingDragHandle] = useState(false)
+  const isFirstLoadRef = useRef(true)
 
   const showMusicListRef = useRef(false)
   useEffect(() => {
@@ -353,8 +355,11 @@ export default memo(() => {
     }
   }, [])
 
-  const refreshListInfo = useCallback(async () => {
-    setIsLoading(true)
+  const refreshListInfo = useCallback(async (isBackgroundRefresh = false) => {
+    // 首次加载显示 loading，后台刷新保留已有数据避免闪烁
+    if (!isBackgroundRefresh) {
+      setIsLoading(true)
+    }
     setHasError(false)
     try {
       const newMap = new Map<string, { cover: string; total: number }>()
@@ -367,11 +372,23 @@ export default memo(() => {
       setHasError(true)
     } finally {
       setIsLoading(false)
+      isFirstLoadRef.current = false
     }
   }, [allList, fetchListInfo])
 
   useEffect(() => {
     void refreshListInfo()
+  }, [refreshListInfo])
+
+  // 当从详情页返回时，后台刷新封面数据（不清空已有数据）
+  useEffect(() => {
+    const subscription = Navigation.events().registerComponentDidAppearListener(({ componentId: appearedId }) => {
+      const homeId = commonState.componentIds.find(c => c.name === 'home')?.id
+      if (appearedId === homeId && !isFirstLoadRef.current) {
+        void refreshListInfo(true)
+      }
+    })
+    return () => subscription.remove()
   }, [refreshListInfo])
 
   useEffect(() => {
@@ -627,7 +644,7 @@ export default memo(() => {
             refreshControl={
               <RefreshControl
                 refreshing={isLoading}
-                onRefresh={refreshListInfo}
+                onRefresh={() => refreshListInfo(false)}
                 colors={[theme['c-primary-font']]}
                 enabled={!isTouchingDragHandle}
               />

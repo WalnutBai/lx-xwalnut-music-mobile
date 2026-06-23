@@ -1,11 +1,12 @@
 /**
  * KuGou Music daily recommendation API
- * Includes: song recommendations, daily recommendations, history recommendations, style recommendations
+ * Includes: song recommendations, daily recommendations, new songs
  */
 import { httpFetch } from '../../request'
 import settingState from '@/store/setting/state'
 import { log } from '@/utils/log'
 import { stringMd5 } from 'react-native-quick-md5'
+import { formatPlayTime } from '../../index'
 
 const SIGN_SALT = 'OIlwieks28dk2k092lksi2UIkp'
 
@@ -72,7 +73,7 @@ const transformSong = (item, index) => {
       name: songname,
       singer: singername,
       source: 'kg',
-      interval: duration ? `${Math.floor(duration / 60)}:${String(duration % 60).padStart(2, '0')}` : '',
+      interval: duration ? formatPlayTime(duration) : '',
       img: img ? img.replace('{size}', '400') : '',
       albumName,
       albumId: String(albumId),
@@ -212,128 +213,6 @@ export default {
     } catch (e) {
       log.error('[KG DailyRec] getEverydayRecommend 失败', e.message)
       if (retryNum < 2) return this.getEverydayRecommend(retryNum + 1)
-      throw e
-    }
-  },
-
-  /**
-   * History recommendations
-   * @param {string} mode - 'list' returns list, 'song' returns song details
-   * @param {string} date - date filter
-   * @param {string} historyName - history recommendation name filter
-   */
-  async getHistoryRecommend(mode = 'list', date = '', historyName = '', retryNum = 0) {
-    if (retryNum > 2) return Promise.reject(new Error('try max num'))
-
-    try {
-      const device = getDeviceInfo()
-      log.info('[KG DailyRec] getHistoryRecommend 开始', { mode, date, historyName })
-
-      const clienttime = Math.floor(Date.now() / 1000)
-      const defaultParams = {
-        dfid: device.dfid,
-        mid: device.mid,
-        uuid: '-',
-        appid: '1005',
-        clientver: '20489',
-        clienttime,
-      }
-      const queryParams = { ...defaultParams, mode, platform: 'ios' }
-      if (date) queryParams.date = date
-      if (historyName) queryParams.history_name = historyName
-      const sig = signAndroidParams(queryParams, '')
-
-      const url = `https://gateway.kugou.com/everyday/api/v1/get_history`
-      log.info('[KG DailyRec] getHistoryRecommend URL:', url)
-
-      const { body, statusCode } = await httpFetch(url, {
-        method: 'POST',
-        headers: {
-          ...buildHeaders(),
-          'x-router': 'everydayrec.service.kugou.com',
-          'Content-Type': 'application/json',
-          dfid: device.dfid,
-          mid: device.mid,
-          clienttime: String(clienttime),
-          Cookie: `mid=${device.mid}`,
-        },
-        params: { ...queryParams, signature: sig },
-      }).promise
-
-      log.info('[KG DailyRec] getHistoryRecommend 响应', { statusCode, status: body?.status })
-
-      if (body?.status !== 1 && body?.error_code !== 0) {
-        throw new Error(`API错误: ${body?.error_code} ${body?.error || ''}`)
-      }
-
-      if (mode === 'list') {
-        const list = body?.data?.list || body?.data?.history_list || []
-        log.info('[KG DailyRec] getHistoryRecommend 列表成功', { count: list.length })
-        return { type: 'list', list }
-      } else {
-        const songs = body?.data?.song_list || body?.data?.songs || body?.data?.list || []
-        log.info('[KG DailyRec] getHistoryRecommend 歌曲成功', { count: songs.length })
-        return { type: 'songs', songs: transformSongList(songs, 'history') }
-      }
-    } catch (e) {
-      log.error('[KG DailyRec] getHistoryRecommend 失败', e.message)
-      if (retryNum < 2) return this.getHistoryRecommend(mode, date, historyName, retryNum + 1)
-      throw e
-    }
-  },
-
-  /**
-   * Style recommendations
-   * @param {string} tagIds - style tag IDs (comma-separated)
-   */
-  async getStyleRecommend(tagIds = '', retryNum = 0) {
-    if (retryNum > 2) return Promise.reject(new Error('try max num'))
-
-    try {
-      const device = getDeviceInfo()
-      log.info('[KG DailyRec] getStyleRecommend 开始', { tagIds })
-
-      const clienttime = Math.floor(Date.now() / 1000)
-      const defaultParams = {
-        dfid: device.dfid,
-        mid: device.mid,
-        uuid: '-',
-        appid: '1005',
-        clientver: '20489',
-        clienttime,
-      }
-      const paramsMap = { ...defaultParams, tagids: tagIds }
-      const sig = signAndroidParams(paramsMap, '')
-
-      const url = `https://gateway.kugou.com/everydayrec.service/everyday_style_recommend`
-      log.info('[KG DailyRec] getStyleRecommend URL:', url)
-
-      const { body, statusCode } = await httpFetch(url, {
-        method: 'POST',
-        headers: {
-          ...buildHeaders(),
-          'Content-Type': 'application/json',
-          dfid: device.dfid,
-          mid: device.mid,
-          clienttime: String(clienttime),
-          Cookie: `mid=${device.mid}`,
-        },
-        params: { ...paramsMap, signature: sig },
-        body: JSON.stringify({}),
-      }).promise
-
-      log.info('[KG DailyRec] getStyleRecommend 响应', { statusCode, status: body?.status })
-
-      if (body?.status !== 1 && body?.error_code !== 0) {
-        throw new Error(`API错误: ${body?.error_code} ${body?.error || ''}`)
-      }
-
-      const songs = body?.data?.song_list || body?.data?.songs || body?.data?.list || []
-      log.info('[KG DailyRec] getStyleRecommend 成功', { count: songs.length })
-      return transformSongList(songs, 'style')
-    } catch (e) {
-      log.error('[KG DailyRec] getStyleRecommend 失败', e.message)
-      if (retryNum < 2) return this.getStyleRecommend(tagIds, retryNum + 1)
       throw e
     }
   },

@@ -7,6 +7,7 @@ import axios from 'axios';
 import { stringMd5 } from 'react-native-quick-md5';
 import { Buffer } from '@craftzdog/react-native-buffer';
 import { generateSidEdt, cryptoAesEncrypt, cryptoRSAEncrypt, cryptoAesDecrypt, rsaEncrypt2, playlistAesEncrypt, playlistAesDecrypt } from './crypto';
+import { formatPlayTime } from '@/utils/common';
 
 // KuGou API configuration
 const KG_CONFIG = {
@@ -1223,7 +1224,7 @@ export async function getPlaylistSongs(
         albumName: item.album_name || '',
         albumMid: '',
         img: item.image ? `https://imge.kugou.com/stdmusic/${item.image.replace('{size}', '400')}` : '',
-        interval: item.duration ? Math.floor(item.duration / 1000) : 0,
+        interval: item.duration ? formatPlayTime(Math.floor(item.duration / 1000)) : '',
         source: 'kg',
         order: index,
         fileId: item.fileid || 0,

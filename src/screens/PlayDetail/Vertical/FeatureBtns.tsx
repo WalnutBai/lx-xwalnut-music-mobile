@@ -25,7 +25,6 @@ import { type Position } from '@/screens/Home/Views/Mylist/MusicList/ListMenu'
 import { getMvUrl as getWyMvUrl } from '@/utils/musicSdk/wy/mv.js'
 import { getMvUrl as getTxMvUrl } from '@/utils/musicSdk/tx/mv.js'
 import { getMvUrl as getKgMvUrl } from '@/utils/musicSdk/kg/mv.js'
-import ClimaxBtn from '@/screens/PlayDetail/Vertical/Player/components/MoreBtn/ClimaxBtn'
 import { useWindowSize } from '@/utils/hooks'
 
 const BTN_SIZE = scaleSizeW(50)
@@ -200,7 +199,6 @@ export default memo(({ componentId }: { componentId: string }) => {
 
   return (
     <View style={[styles.container, isSmallWindow && { paddingVertical: 6 }]}>
-      <ClimaxBtn />
       <TouchableOpacity style={styles.btnItem} onPress={handleLyricPress} activeOpacity={0.6}>
         <SvgIcon name="lyric" color={enabledLyric ? theme['c-primary'] : iconColor} size={enabledLyric ? BTN_SIZE * 0.9 : BTN_SIZE * 0.8} />
       </TouchableOpacity>

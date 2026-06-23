@@ -341,10 +341,6 @@ declare namespace LX {
     getRecommendSongs?(retryNum?: number): Promise<DailyRecResult>
     /** Daily recommendation (kg) */
     getEverydayRecommend?(retryNum?: number): Promise<DailyRecResult>
-    /** History recommendation (kg) */
-    getHistoryRecommend?(mode?: string, date?: string, historyName?: string, retryNum?: number): Promise<DailyRecResult>
-    /** Style recommendation (kg) */
-    getStyleRecommend?(tagIds?: string, retryNum?: number): Promise<DailyRecResult>
     /** New song express (kg) */
     getNewSongs?(retryNum?: number): Promise<DailyRecResult>
   }
@@ -497,13 +493,6 @@ declare namespace LX {
     /** Get favorited playlists */
     getFavPlaylists?(page?: number, pageSize?: number, retryNum?: number): Promise<{
       list: FavPlaylistItem[]
-      total?: number
-      hasMore?: boolean
-    }>
-
-    /** Get favorited albums */
-    getFavAlbums?(page?: number, pageSize?: number, retryNum?: number): Promise<{
-      list: FavAlbumItem[]
       total?: number
       hasMore?: boolean
     }>

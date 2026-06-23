@@ -495,7 +495,7 @@ export default memo(() => {
           const isValidUrl = url && url.length > 10 && !hasInvalidLevel
           
           if (isValidUrl) {
-            sourceTestLog.info(`[${source.name}] ✓ ${quality} 获取URL成功 [耗时${qualityTime}ms]`)
+            sourceTestLog.info(`[${source.name}] [OK] ${quality} 获取URL成功 [耗时${qualityTime}ms]`)
             sourceTestLog.info(`[${source.name}]   - actualType: ${actualType}`)
             sourceTestLog.info(`[${source.name}]   - URL长度: ${url?.length || 0}`)
             sourceTestLog.info(`[${source.name}]   - URL预览: ${url?.substring(0, 100)}${url?.length > 100 ? '...' : ''}`)
@@ -532,24 +532,24 @@ export default memo(() => {
                       // 完全匹配（允许指定MB的误差，因为文件大小可能有微小差异）
                       if (Math.abs(actualSizeRounded - expectedSizeRounded) <= errorMB) {
                         matchedQuality = q
-                        sourceTestLog.info(`[${source.name}]   - ✓ 大小完全匹配: ${q} (${expectedSizeRounded.toFixed(2)}MB)`)
+                        sourceTestLog.info(`[${source.name}]   - [OK] 大小完全匹配: ${q} (${expectedSizeRounded.toFixed(2)}MB)`)
                         break
                       }
                     }
                   
                   if (!matchedQuality) {
                     // 没有任何音质大小匹配
-                    sourceTestLog.info(`[${source.name}]   - ⚠️ 大小不匹配任何元数据音质`)
+                    sourceTestLog.info(`[${source.name}]   - [WARN] 大小不匹配任何元数据音质`)
                     qualityResults[quality] = { success: false, error: `大小不匹配(${actualSizeRounded.toFixed(2)}MB)`, time: qualityTime }
                     continue
                   }
                   
                   // 检查是否与请求的音质一致
                   if (matchedQuality === quality) {
-                    sourceTestLog.info(`[${source.name}]   - ✓ 与请求音质 ${quality} 一致`)
+                    sourceTestLog.info(`[${source.name}]   - [OK] 与请求音质 ${quality} 一致`)
                     actualQualityFromUrl = quality
                   } else {
-                    sourceTestLog.info(`[${source.name}]   - ⚠️ 实际音质 ${matchedQuality} 与请求音质 ${quality} 不一致`)
+                    sourceTestLog.info(`[${source.name}]   - [WARN] 实际音质 ${matchedQuality} 与请求音质 ${quality} 不一致`)
                     // 记录实际匹配的音质，继续测试下一个
                     detectedQualities[matchedQuality] = { url: url.substring(0, 50) + '...', time: qualityTime }
                     qualityResults[quality] = { success: false, error: `实际=${matchedQuality}`, time: qualityTime }
@@ -557,18 +557,18 @@ export default memo(() => {
                   }
                 } else {
                   // 无法获取文件大小
-                  sourceTestLog.info(`[${source.name}]   - ⚠️ 无法获取文件大小`)
+                  sourceTestLog.info(`[${source.name}]   - [WARN] 无法获取文件大小`)
                   qualityResults[quality] = { success: false, error: '无法获取文件大小', time: qualityTime }
                   continue
                 }
               } catch {
-                sourceTestLog.info(`[${source.name}]   - ⚠️ 获取文件信息失败`)
+                sourceTestLog.info(`[${source.name}]   - [WARN] 获取文件信息失败`)
                 qualityResults[quality] = { success: false, error: '获取文件信息失败', time: qualityTime }
                 continue
               }
             } else {
               // 无元数据大小信息
-              sourceTestLog.info(`[${source.name}]   - ⚠️ 无元数据大小信息`)
+              sourceTestLog.info(`[${source.name}]   - [WARN] 无元数据大小信息`)
               qualityResults[quality] = { success: false, error: '无元数据', time: qualityTime }
               continue
             }
@@ -580,16 +580,16 @@ export default memo(() => {
               qualityResults[quality] = { success: true, url: url.substring(0, 50) + '...', time: qualityTime }
               maxQuality = quality
               highestPriority = qualityPriority[quality] || 0
-              sourceTestLog.info(`[${source.name}] ✓ ${quality} 音质匹配! 已找到最高音质`)
+              sourceTestLog.info(`[${source.name}] [OK] ${quality} 音质匹配! 已找到最高音质`)
               break
             } else if (isQualityMatch) {
               qualityResults[quality] = { success: true, url: url.substring(0, 50) + '...', time: qualityTime }
               maxQuality = quality
               highestPriority = qualityPriority[quality] || 0
-              sourceTestLog.info(`[${source.name}] ✓ ${quality} URL格式匹配! 已找到最高音质`)
+              sourceTestLog.info(`[${source.name}] [OK] ${quality} URL格式匹配! 已找到最高音质`)
               break
             } else {
-              sourceTestLog.info(`[${source.name}] ✗ ${quality} 音质不匹配`)
+              sourceTestLog.info(`[${source.name}] [FAIL] ${quality} 音质不匹配`)
               sourceTestLog.info(`[${source.name}]   - 请求音质: ${quality}`)
               sourceTestLog.info(`[${source.name}]   - API返回音质: ${actualType || '未返回'}`)
               sourceTestLog.info(`[${source.name}]   - URL推断音质: ${actualQualityFromUrl}`)
@@ -607,7 +607,7 @@ export default memo(() => {
             }
           } else {
             // URL无效，降级到下一档
-            sourceTestLog.info(`[${source.name}] ✗ ${quality} URL无效 [耗时${qualityTime}ms]`)
+            sourceTestLog.info(`[${source.name}] [FAIL] ${quality} URL无效 [耗时${qualityTime}ms]`)
             sourceTestLog.info(`[${source.name}]   - URL存在: ${!!url}`)
             sourceTestLog.info(`[${source.name}]   - URL长度: ${url?.length || 0}`)
             sourceTestLog.info(`[${source.name}]   - 包含无效level参数: ${hasInvalidLevel}`)
@@ -622,7 +622,7 @@ export default memo(() => {
           const errorStack = qualityError.stack || '无堆栈信息'
           
           // 记录详细的错误信息
-          sourceTestLog.info(`[${source.name}] ✗ ${quality} 请求异常 [耗时${qualityEndTime - qualityStartTime}ms]`)
+          sourceTestLog.info(`[${source.name}] [FAIL] ${quality} 请求异常 [耗时${qualityEndTime - qualityStartTime}ms]`)
           sourceTestLog.info(`[${source.name}]   - 错误类型: ${errorType}`)
           sourceTestLog.info(`[${source.name}]   - 错误消息: ${errorMessage}`)
           sourceTestLog.info(`[${source.name}]   - 错误堆栈: ${errorStack.substring(0, 500)}${errorStack.length > 500 ? '...' : ''}`)
@@ -956,8 +956,8 @@ export default memo(() => {
     switch (status) {
       case 'pending': return '等待测试'
       case 'testing': return '测试中...'
-      case 'success': return '✓'
-      case 'failed': return '✗'
+      case 'success': return '[OK]'
+      case 'failed': return '[FAIL]'
       default: return ''
     }
   }

@@ -6,16 +6,31 @@ import {
   unlink,
   writeFile,
   readFile,
+  stat,
 } from '@/utils/fs'
+import RNFS from 'react-native-fs'
 
 const logPath = temporaryDirectoryPath + '/error.log'
 const sourceTestLogPath = temporaryDirectoryPath + '/source_test.log'
+const MAX_LOG_SIZE = 5 * 1024 * 1024 
+const READ_LIMIT = 1 * 1024 * 1024   
+
+const trimLogFile = async () => {
+  try {
+    const info = await stat(logPath)
+    if (info.size > MAX_LOG_SIZE) {
+      await unlink(logPath)
+      await writeFile(logPath, '')
+    }
+  } catch { /* ignore */ }
+}
 
 const logTools = {
   tempLog: [] as Array<{ time: string; type: 'LOG' | 'WARN' | 'ERROR'; text: string }> | null,
   writeLog(msg: string) {
     console.log(msg)
     void appendFile(logPath, '\n----lx log----\n' + msg)
+    void trimLogFile()
   },
   async initLogFile() {
     try {
@@ -38,6 +53,14 @@ export const init = async () => {
 }
 
 export const getLogs = async () => {
+  try {
+    const info = await stat(logPath)
+    if (info.size > READ_LIMIT) {
+      // 大文件只读取最后 1MB，避免 OOM
+      const position = Math.max(0, info.size - READ_LIMIT)
+      return await RNFS.read(logPath, READ_LIMIT, position, 'utf8')
+    }
+  } catch { /* ignore */ }
   return readFile(logPath)
 }
 

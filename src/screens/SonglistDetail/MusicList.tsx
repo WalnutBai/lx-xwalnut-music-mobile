@@ -17,6 +17,8 @@ export interface MusicListProps {
   isCreator: boolean
   onListUpdate: OnlineListProps['onListUpdate']
   playingId: string | null
+  searchText: string
+  isFuzzySearch: boolean
 }
 
 export interface MusicListType {
@@ -25,12 +27,40 @@ export interface MusicListType {
   addSongToList: (rawSong: any) => void
 }
 
-export default forwardRef<MusicListType, MusicListProps>(({componentId, isCreator, playingId }, ref) => {
+export default forwardRef<MusicListType, MusicListProps>(({componentId, isCreator, playingId, searchText, isFuzzySearch }, ref) => {
   const listRef = useRef<OnlineListType>(null)
   const isUnmountedRef = useRef(false)
   const info = useListInfo()
   const [txIsUserCreated, setTxIsUserCreated] = useState(false)
   const [kgIsUserCreated, setKgIsUserCreated] = useState(false)
+  const fullListRef = useRef<LX.Music.MusicInfoOnline[]>([])
+
+  const filterList = useCallback((list: LX.Music.MusicInfoOnline[], keyword: string, fuzzy: boolean) => {
+    if (!keyword.trim()) return list
+    const textLower = keyword.trim().toLowerCase()
+    if (!fuzzy) {
+      // 严格模式：精确子串匹配
+      return list.filter(song =>
+        song.name?.toLowerCase().includes(textLower) ||
+        song.singer?.toLowerCase().includes(textLower) ||
+        (song as any).meta?.albumName?.toLowerCase().includes(textLower)
+      )
+    }
+    // 模糊模式：允许字符间有间隔
+    const chars = textLower.split('').map(c => c.replace(/[.*+?^${}()|[\]\\]/, '\\$&'))
+    const regex = new RegExp(chars.join('.*'), 'i')
+    return list.filter(song => {
+      const str = `${song.name}${song.singer}${(song as any).meta?.albumName || ''}`
+      return regex.test(str)
+    })
+  }, [])
+
+  useEffect(() => {
+    if (fullListRef.current.length > 0) {
+      const filtered = searchText.trim() ? filterList(fullListRef.current, searchText, isFuzzySearch) : fullListRef.current
+      listRef.current?.setList(filtered)
+    }
+  }, [searchText, isFuzzySearch, filterList])
 
   useEffect(() => {
     if (info.source === 'tx') {
@@ -79,7 +109,7 @@ export default forwardRef<MusicListType, MusicListProps>(({componentId, isCreato
                 const castedList = fullList as LX.Music.MusicInfoOnline[]
                 if (castedList.length && currentList.length && castedList[0].id === currentList[0].id) {
                   songlistState.listDetailInfo.list = castedList
-                  listRef.current?.setList(castedList)
+                  fullListRef.current = castedList
                   setTimeout(() => {
                     listRef.current?.scrollToInfo(musicInfo as LX.Music.MusicInfoOnline)
                   }, 200)
@@ -120,6 +150,7 @@ export default forwardRef<MusicListType, MusicListProps>(({componentId, isCreato
         ) {
           if (global.lx.isEnableLog) log.info(`[SonglistDetail] loadList cache hit`, { listCount: listDetailInfo.list.length })
           requestAnimationFrame(() => {
+            fullListRef.current = listDetailInfo.list
             listRef.current?.setList(listDetailInfo.list)
           })
           return Promise.resolve(createDetailInfo(listDetailInfo.info))
@@ -134,8 +165,10 @@ export default forwardRef<MusicListType, MusicListProps>(({componentId, isCreato
             if (global.lx.isEnableLog) log.info(`[SonglistDetail] loadList got data`, { songCount: listDetail.list.length, total: listDetail.total })
             const result = setListDetail(listDetail, id, page)
             if (isUnmountedRef.current) return createDetailInfo(result.info)
+            const filtered = searchText.trim() ? filterList(result.list, searchText) : result.list
             requestAnimationFrame(() => {
-              listRef.current?.setList(result.list)
+              fullListRef.current = result.list
+              listRef.current?.setList(filtered)
               listRef.current?.setStatus(
                 songlistState.listDetailInfo.maxPage <= page ? 'end' : 'idle',
               )
@@ -165,7 +198,9 @@ export default forwardRef<MusicListType, MusicListProps>(({componentId, isCreato
             const castedList = fullList as LX.Music.MusicInfoOnline[]
             if (castedList.some(s => s.id === targetInfo.id)) {
               songlistState.listDetailInfo.list = castedList
-              listRef.current?.setList(castedList)
+              fullListRef.current = castedList
+              const filtered = filterList(castedList, searchText)
+              listRef.current?.setList(filtered)
               setTimeout(() => {
                 listRef.current?.scrollToInfo(targetInfo)
               }, 200)
@@ -194,7 +229,9 @@ export default forwardRef<MusicListType, MusicListProps>(({componentId, isCreato
           currentList.push(song)
           songlistState.listDetailInfo.list = currentList
           songlistState.listDetailInfo.total = currentList.length
-          listRef.current?.setList(currentList)
+          fullListRef.current = currentList
+          const filtered = filterList(currentList, searchText)
+          listRef.current?.setList(filtered)
           log.info(`[乐观更新] 已添加歌曲到列表: ${song.name}, 当前共 ${currentList.length} 首`)
         }
       },
@@ -221,7 +258,9 @@ export default forwardRef<MusicListType, MusicListProps>(({componentId, isCreato
       .then((listDetail) => {
         const result = setListDetail(listDetail, songlistState.listDetailInfo.id, page)
         if (isUnmountedRef.current) return
-        listRef.current?.setList(result.list)
+        fullListRef.current = result.list
+        const filtered = filterList(result.list, searchText)
+        listRef.current?.setList(filtered)
         listRef.current?.setStatus(songlistState.listDetailInfo.maxPage <= page ? 'end' : 'idle')
       })
       .catch(() => {
@@ -239,7 +278,13 @@ export default forwardRef<MusicListType, MusicListProps>(({componentId, isCreato
       .then((listDetail) => {
         const result = setListDetail(listDetail, songlistState.listDetailInfo.id, page)
         if (isUnmountedRef.current) return
-        listRef.current?.setList(result.list, true)
+        // 追加新数据并按 ID 去重
+        const existingIds = new Set(fullListRef.current.map(m => m.id))
+        const newSongs = result.list.filter(m => !existingIds.has(m.id))
+        fullListRef.current = [...fullListRef.current, ...newSongs]
+        // 同步更新列表显示
+        const filtered = searchText.trim() ? filterList(fullListRef.current, searchText) : fullListRef.current
+        listRef.current?.setList(filtered)
         listRef.current?.setStatus(songlistState.listDetailInfo.maxPage <= page ? 'end' : 'idle')
       })
       .catch(() => {

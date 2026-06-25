@@ -492,11 +492,15 @@ export const playNext = async (isAutoToggle = false): Promise<void> => {
 
   if (playerState.playMusicInfo.musicInfo == null) return null
 
-  if (randomNextMusicInfo.info) return randomNextMusicInfo.info
+  if (randomNextMusicInfo.info) {
+    const randomInfo = randomNextMusicInfo.info
+    randomNextMusicInfo.info = null
+    await handlePlayNext(randomInfo)
+    return
+  }
 
   const playMusicInfo = playerState.playMusicInfo
   const playInfo = playerState.playInfo
-  // console.log(playInfo.playerListId)
   const currentListId = playInfo.playerListId
   if (!currentListId) return handleToggleStop()
   const currentList = getList(currentListId)
@@ -543,8 +547,18 @@ export const playNext = async (isAutoToggle = false): Promise<void> => {
     isNext: true,
   })
 
-  if (!filteredList.length) return handleToggleStop()
-  // let currentIndex: number = filteredList.indexOf(currentList[playInfo.playerPlayIndex])
+  if (!filteredList.length) {
+    if (currentList.length > 0) {
+      const nextIndex = (playInfo.playerPlayIndex + 1) % currentList.length
+      await handlePlayNext({
+        musicInfo: currentList[nextIndex],
+        listId: currentListId,
+        isTempPlay: false,
+      })
+      return
+    }
+    return handleToggleStop()
+  }
   if (playerIndex == -1 && filteredList.length) playerIndex = 0
   let nextIndex = playerIndex
 

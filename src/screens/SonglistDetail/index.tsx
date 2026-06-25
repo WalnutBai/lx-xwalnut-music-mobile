@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
-import { View, BackHandler, TouchableOpacity, StyleSheet } from 'react-native'
+import { View, BackHandler, TouchableOpacity, StyleSheet, TextInput as RNTextInput } from 'react-native'
 import MusicList, { type MusicListType } from './MusicList'
 import { type ListInfoItem } from '@/store/songlist/state'
 import { ListInfoContext } from './state'
@@ -14,6 +14,8 @@ import { BorderWidths } from '@/theme'
 import { pop } from '@/navigation'
 import commonState from '@/store/common/state'
 import { Icon } from '@/components/common/Icon'
+import { SvgIcon } from '@/components/common/SvgIcon'
+import Input from '@/components/common/Input'
 import { useIsWyPlaylistSubscribed, useWySubscribedPlaylists, useWyUid } from '@/store/user/hook'
 import wyApi from '@/utils/musicSdk/wy/user'
 import { addWySubscribedPlaylist, removeWySubscribedPlaylist } from '@/store/user/action'
@@ -27,7 +29,7 @@ import MusicInfoOnline = LX.Music.MusicInfoOnline
 
 const IMAGE_WIDTH = scaleSizeW(70)
 
-const ListHeader = ({ detailInfo, info, onBack }: { detailInfo: DetailInfo, info: ListInfoItem, onBack: () => void }) => {
+const ListHeader = ({ detailInfo, info, onBack, showSearchBar, searchText, isFuzzySearch, onToggleSearch, onSearchTextChanged, onToggleSearchMode }: { detailInfo: DetailInfo, info: ListInfoItem, onBack: () => void, showSearchBar: boolean, searchText: string, isFuzzySearch: boolean, onToggleSearch: () => void, onSearchTextChanged: (text: string) => void, onToggleSearchMode: () => void }) => {
   const theme = useTheme()
   const loggedInUserId = useWyUid()
   const isSubscribed = useIsWyPlaylistSubscribed(info.id)
@@ -104,7 +106,28 @@ const ListHeader = ({ detailInfo, info, onBack }: { detailInfo: DetailInfo, info
               )}
             </View>
           </View>
+          <TouchableOpacity style={styles.searchIcon} onPress={onToggleSearch}>
+            <Icon name="search-2" size={20} color={theme['c-font-label']} />
+          </TouchableOpacity>
         </View>
+        {showSearchBar && (
+          <View style={styles.searchBarContainer}>
+            <Input
+              placeholder="搜索歌曲名称、歌手..."
+              value={searchText}
+              onChangeText={onSearchTextChanged}
+              autoFocus
+              style={styles.searchInput}
+            />
+            <TouchableOpacity style={styles.searchModeButton} onPress={onToggleSearchMode}>
+              {isFuzzySearch ? (
+                <SvgIcon name="fuzzy-search" size={18} color={theme['c-font-label']} />
+              ) : (
+                <Icon name="search-2" size={18} color={theme['c-font-label']} />
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
         <ActionBar onBack={onBack} />
       </View>
     </>
@@ -121,6 +144,9 @@ export default ({ info, onBack, initialScrollToInfo }: { info: ListInfoItem, onB
     userId: info.userId,
     total: Number(info.total) || 0,
   })
+  const [showSearchBar, setShowSearchBar] = useState(false)
+  const [searchText, setSearchText] = useState('')
+  const [isFuzzySearch, setIsFuzzySearch] = useState(true)
   const playlists = useWySubscribedPlaylists()
   const isInitialMount = useRef(true)
   const loggedInUserId = useWyUid()
@@ -218,13 +244,30 @@ export default ({ info, onBack, initialScrollToInfo }: { info: ListInfoItem, onB
     }
   }, [detailInfo.total, initialScrollToInfo])
 
-  const ListHeaderComponent = useMemo(() => <ListHeader detailInfo={detailInfo} info={info} onBack={handleBack} />, [detailInfo, info, handleBack])
+  const handleToggleSearch = useCallback(() => {
+    setShowSearchBar(prev => {
+      if (prev) {
+        setSearchText('')
+        setIsFuzzySearch(true)
+      }
+      return !prev
+    })
+  }, [])
 
-  const isCreator = useMemo(() => {
-    return info.source === 'wy' &&
-      detailInfo.userId &&
-      String(detailInfo.userId) === String(loggedInUserId)
-  }, [info.source, detailInfo.userId, loggedInUserId])
+  const handleSearchTextChanged = useCallback((text: string) => {
+    setSearchText(text)
+  }, [])
+
+  const handleToggleSearchMode = useCallback(() => {
+    setIsFuzzySearch(prev => {
+      toast(prev ? '精确搜索' : '模糊搜索')
+      return !prev
+    })
+  }, [])
+
+  const ListHeaderComponent = useMemo(() => (
+    <ListHeader detailInfo={detailInfo} info={info} onBack={handleBack} showSearchBar={showSearchBar} searchText={searchText} isFuzzySearch={isFuzzySearch} onToggleSearch={handleToggleSearch} onSearchTextChanged={handleSearchTextChanged} onToggleSearchMode={handleToggleSearchMode} />
+  ), [detailInfo, info, handleBack, showSearchBar, searchText, isFuzzySearch, handleToggleSearch, handleSearchTextChanged, handleToggleSearchMode])
 
   const handleListUpdate = useCallback((newList: LX.Music.MusicInfoOnline[]) => {
     setDetailInfo(prev => ({
@@ -237,7 +280,7 @@ export default ({ info, onBack, initialScrollToInfo }: { info: ListInfoItem, onB
     <View style={{ flex: 1 }}>
       <ListInfoContext.Provider value={info}>
         {ListHeaderComponent}
-        <MusicList ref={musicListRef} playingId={playerMusicInfo.id} componentId={commonState.componentIds[commonState.componentIds.length - 1]?.id} isCreator={isCreator} onListUpdate={handleListUpdate} />
+        <MusicList ref={musicListRef} playingId={playerMusicInfo.id} componentId={commonState.componentIds[commonState.componentIds.length - 1]?.id} isCreator={true} searchText={searchText} isFuzzySearch={isFuzzySearch} onListUpdate={handleListUpdate} />
       </ListInfoContext.Provider>
     </View>
   )
@@ -272,6 +315,32 @@ const styles = createStyle({
     alignItems: 'center',
     flexGrow: 1,
     flexShrink: 1,
+  },
+  searchIcon: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 10,
+    padding: 5,
+  },
+  searchBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+    paddingVertical: 5,
+  },
+  searchInput: {
+    flex: 1,
+    height: 38,
+    borderWidth: 1,
+    borderRadius: 4,
+    paddingHorizontal: 10,
+    fontSize: 14,
+    justifyContent: 'center',
+  },
+  searchModeButton: {
+    width: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   subscribeButton: {
     paddingLeft: 10,

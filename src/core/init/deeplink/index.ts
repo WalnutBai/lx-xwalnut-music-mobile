@@ -12,7 +12,7 @@ import { handleFileMusicAction, handleFileJSAction, handleFileLXMCAction } from 
 
 const handleLinkAction = async (link: string) => {
   // console.log(link)
-  const [url, search] = link.split('?')
+  const [url, hash] = link.split('#')
   const [type, action, ...paths] = url.replace('lxmusic://', '').split('/')
   const params: {
     paths: string[]
@@ -21,13 +21,27 @@ const handleLinkAction = async (link: string) => {
   } = {
     paths: [],
   }
-  if (search) {
-    for (const param of search.split('&')) {
-      const [key, value] = param.split('=')
-      params[key] = value
+  if (hash) {
+    const kwIdx = hash.indexOf('keyword=')
+    if (kwIdx !== -1) {
+      const kwEnd = hash.indexOf('&platform=', kwIdx)
+      const kwEnd2 = hash.indexOf('&type=', kwIdx)
+      const kwEnds = [kwEnd, kwEnd2].filter(e => e !== -1).sort((a, b) => a - b)
+      if (kwEnds.length > 0) {
+        params.keyword = decodeURIComponent(hash.substring(kwIdx + 8, kwEnds[0]))
+      } else {
+        params.keyword = decodeURIComponent(hash.substring(kwIdx + 8))
+      }
     }
-    if (params.data) params.data = JSON.parse(decodeURIComponent(params.data))
+    const paramRegex = /([^&=]+)=([^&]*)/g
+    let match
+    while ((match = paramRegex.exec(hash)) !== null) {
+      if (match[1] !== 'keyword') {
+        params[match[1]] = decodeURIComponent(match[2] || '')
+      }
+    }
   }
+  if (params.data) params.data = JSON.parse(decodeURIComponent(params.data))
   params.paths = paths.map((p) => decodeURIComponent(p))
   console.log(params)
   switch (type) {

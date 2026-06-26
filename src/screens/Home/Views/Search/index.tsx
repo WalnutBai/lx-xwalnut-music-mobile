@@ -111,11 +111,12 @@ export default () => {
     }
     global.app_event.on('searchTypeChanged', handleTypeChange)
 
-    const handleSearchDeepLink = (keyword: string, source: string, type: string) => {
-      if (source) searchInfo.current.source = source as LX.OnlineSource
+    const handleSearchDeepLink = async (keyword: string, source: string, type: string) => {
+      const info = await getSearchSetting()
+      searchInfo.current.source = (source || info.source) as LX.OnlineSource
+      searchInfo.current.searchType = (type || info.type) as SearchType
       if (type) {
-        searchInfo.current.searchType = type as SearchType
-        global.app_event.searchTypeChanged(type as SearchType)
+        global.app_event.searchTypeChanged(searchInfo.current.searchType)
       }
       if (source) {
         switch (searchInfo.current.searchType) {
@@ -136,9 +137,7 @@ export default () => {
           searchInfo.current.searchType,
         )
       }
-      InteractionManager.runAfterInteractions(() => {
-        headerBarRef.current?.focus()
-      })
+      setTimeout(() => headerBarRef.current?.focus(), 300)
     }
     global.app_event.on('searchDeepLink', handleSearchDeepLink)
 

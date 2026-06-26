@@ -1,6 +1,7 @@
 import { setNavActiveId } from '@/core/common'
 import { saveSearchSetting } from '@/utils/data'
 import { setSearchText, addHistoryWord } from '@/core/search/search'
+import { setPendingAction } from '@/core/pendingAction'
 
 const PLATFORM_MAP: Record<string, string> = {
   kw: 'kw',
@@ -42,15 +43,14 @@ const handleSearch = async (params: Record<string, any>) => {
     await saveSearchSetting({ type: searchType as any })
   }
 
+  setNavActiveId('nav_search')
+
   if (keyword) {
     setSearchText(keyword)
     await addHistoryWord(keyword)
-  }
-
-  setNavActiveId('nav_search')
-
-  if (keyword || source || searchType) {
-    global.app_event.searchDeepLink(keyword || '', source, searchType)
+    global.app_event.searchDeepLink(keyword, source, searchType)
+  } else {
+    setPendingAction({ type: 'searchFocus' })
   }
 }
 

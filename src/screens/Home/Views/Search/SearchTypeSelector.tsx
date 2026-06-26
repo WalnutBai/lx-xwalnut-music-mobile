@@ -20,6 +20,14 @@ export default () => {
     void getSearchSetting().then((info) => {
       setType(info.type)
     })
+
+    const handleTypeChange = (newType: SearchType) => {
+      setType(newType)
+    }
+    global.app_event.on('searchTypeChanged', handleTypeChange)
+    return () => {
+      global.app_event.off('searchTypeChanged', handleTypeChange)
+    }
   }, [])
 
   const list = useMemo(() => {

@@ -109,16 +109,52 @@ export default () => {
     }
     global.app_event.on('searchTypeChanged', handleTypeChange)
 
+    const handleSearchDeepLink = (keyword: string, source: string, type: string) => {
+      if (source) searchInfo.current.source = source as LX.OnlineSource
+      if (type) {
+        searchInfo.current.searchType = type as SearchType
+        global.app_event.searchTypeChanged(type as SearchType)
+      }
+      if (source) {
+        switch (searchInfo.current.searchType) {
+          case 'music':
+          case 'singer':
+          case 'album':
+            headerBarRef.current?.setSourceList(searchMusicState.sources, searchInfo.current.source)
+            break
+          case 'songlist':
+            headerBarRef.current?.setSourceList(searchSonglistState.sources, searchInfo.current.source)
+            break
+        }
+      }
+      if (keyword || source || type) {
+        listRef.current?.loadList(
+          keyword || searchState.searchText,
+          searchInfo.current.source,
+          searchInfo.current.searchType,
+        )
+      }
+    }
+    global.app_event.on('searchDeepLink', handleSearchDeepLink)
+
     return () => {
       global.app_event.off('searchTypeChanged', handleTypeChange)
+      global.app_event.off('searchDeepLink', handleSearchDeepLink)
     }
   }, [headerKey])
 
   useEffect(() => {
-    const handleNavChange = (id: string) => {
+    const handleNavChange = async (id: string) => {
       if (id === 'nav_search' && searchState.searchText) {
+        const info = await getSearchSetting()
+        searchInfo.current.source = info.source
+        searchInfo.current.searchType = info.type
         headerBarRef.current?.setText(searchState.searchText)
-        listRef.current?.loadList(searchState.searchText, searchInfo.current.source, searchInfo.current.searchType)
+        headerBarRef.current?.setSourceList(
+          info.type === 'songlist' ? searchSonglistState.sources : searchMusicState.sources,
+          info.source,
+        )
+        listRef.current?.loadList(searchState.searchText, info.source, info.type)
       }
     }
     global.state_event.on('navActiveIdUpdated', handleNavChange)

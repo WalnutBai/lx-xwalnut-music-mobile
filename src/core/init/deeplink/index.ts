@@ -3,6 +3,8 @@ import { errorDialog } from './utils'
 import { handleMusicAction } from './musicAction'
 import { handlePlayerAction, type PlayerAction } from './playerAction'
 import { handleSonglistAction } from './songlistAction'
+import { handleSearchAction } from './searchAction'
+import { startMusicRecognition } from '@/core/musicRecognition'
 import { extname, stat } from '@/utils/fs'
 import { handleFileMusicAction, handleFileJSAction, handleFileLXMCAction } from './fileAction'
 
@@ -35,6 +37,12 @@ const handleLinkAction = async (link: string) => {
       break
     case 'player':
       await handlePlayerAction(action as PlayerAction)
+      break
+    case 'search':
+      await handleSearchAction(action, params)
+      break
+    case 'recognition':
+      await startMusicRecognition()
       break
     // default: throw new Error('Unknown type: ' + type)
   }

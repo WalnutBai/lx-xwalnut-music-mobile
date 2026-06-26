@@ -179,6 +179,10 @@ export class AppEvent extends Event {
     this.emit('searchTypeChanged', type)
   }
 
+  searchDeepLink(keyword: string, source: string, type: string) {
+    this.emit('searchDeepLink', keyword, source, type)
+  }
+
   async jumpListPosition() {
     const playMusicInfo = playerState.playMusicInfo
     let listId = playMusicInfo.listId

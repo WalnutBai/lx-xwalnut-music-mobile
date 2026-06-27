@@ -123,10 +123,11 @@ const registerPlaybackService = async () => {
       }
 
       if (retryGetUrlNum > MAX_RETRY_NUM) {
-        playerLog.error('Max retry attempts reached, stopping playback recovery')
+        playerLog.error('Max retry attempts reached, skipping to next track')
         playerLog.error('Playback failed for:', currentMusicInfo.name, currentMusicInfo.id)
         retryGetUrlId = null
         retryGetUrlNum = 0
+        void playNext(true)
         return
       }
 

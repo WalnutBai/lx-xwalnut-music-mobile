@@ -6,6 +6,7 @@ import IsSwipeToShowPlaylist from './IsSwipeToShowPlaylist'
 import PlayHighQuality from './PlayHighQuality'
 import IsHandleAudioFocus from './IsHandleAudioFocus'
 import IsEnableAudioOffload from './IsEnableAudioOffload'
+import IsEnableAudioPreload from './IsEnableAudioPreload'
 import IsAutoCleanPlayedList from './IsAutoCleanPlayedList'
 import IsShowBluetoothLyric from './IsShowBluetoothLyric'
 import IsShowNotificationImage from './IsShowNotificationImage'
@@ -25,6 +26,7 @@ export default memo(() => {
       <IsAutoCleanPlayedList />
       <IsHandleAudioFocus />
       <IsEnableAudioOffload />
+      <IsEnableAudioPreload />
       <IsShowBluetoothLyric />
       <IsShowLyricTranslation />
       <IsShowLyricRoma />

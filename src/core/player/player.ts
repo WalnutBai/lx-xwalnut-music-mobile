@@ -17,6 +17,8 @@ import { getMusicUrl, getPicPath, getLyricInfo } from '@/core/music'
 import { requestMsg } from '@/utils/message'
 import { getRandom } from '@/utils/common'
 import { filterList } from './utils'
+import { startPreload } from './preload'
+import { preloadLog } from '@/utils/preloadLog'
 import BackgroundTimer from 'react-native-background-timer'
 import {
   checkIgnoringBatteryOptimization,
@@ -57,7 +59,7 @@ const createDelayNextTimeout = (delay: number) => {
 }
 const { addDelayNextTimeout, clearDelayNextTimeout } = createDelayNextTimeout(5000)
 const { addDelayNextTimeout: addLoadTimeout, clearDelayNextTimeout: clearLoadTimeout } =
-  createDelayNextTimeout(100000)
+  createDelayNextTimeout(30000)
 
 const createGettingUrlId = (musicInfo: LX.Music.MusicInfo | LX.Download.ListItem) => {
   const tInfo =
@@ -215,13 +217,16 @@ export const setMusicUrl = (
         } else {
           setResource(currentMusicInfo, url, playerState.progress.nowPlayTime)
         }
+        
+        preloadLog.info(`Current song URL ready, triggering preload`)
+        startPreload()
       }
     })
     .catch((err: any) => {
       console.log(err)
       setStatusText(err.message as string)
       global.app_event.error()
-      // addDelayNextTimeout()
+      void playNext(true)
     })
     .finally(() => {
       if (musicInfo.id === playerState.playMusicInfo.musicInfo?.id && global.lx.gettingUrlId) {

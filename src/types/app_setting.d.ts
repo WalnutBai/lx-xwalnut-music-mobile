@@ -226,6 +226,11 @@ declare global {
       'player.isEnableAudioOffload': boolean
 
       /**
+       * 是否启用音频预加载（播放当前歌曲时提前加载下一首歌曲的播放链接）
+       */
+      'player.isEnableAudioPreload': boolean
+
+      /**
        * 是否显示歌词翻译
        */
       'player.isShowLyricTranslation': boolean

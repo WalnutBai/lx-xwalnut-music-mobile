@@ -91,6 +91,7 @@ const defaultSetting: LX.AppSetting = {
   'player.isAutoCleanPlayedList': false,
   'player.isHandleAudioFocus': true,
   'player.isEnableAudioOffload': true,
+  'player.isEnableAudioPreload': false,
   'player.isShowLyricTranslation': true,
   'player.isShowLyricRoma': false,
   'player.isShowNotificationImage': true,

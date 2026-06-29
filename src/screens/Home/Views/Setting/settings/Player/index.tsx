@@ -14,6 +14,9 @@ import IsShowLyricTranslation from './IsShowLyricTranslation'
 import IsShowLyricRoma from './IsShowLyricRoma'
 import IsS2T from './IsS2T'
 import MaxCache from './MaxCache'
+import IsEnableAutoToggleSource from './IsEnableAutoToggleSource'
+import ToggleSourceMaxRetry from './ToggleSourceMaxRetry'
+import FailureStrategy from './FailureStrategy'
 import { useI18n } from '@/lang'
 
 export default memo(() => {
@@ -32,6 +35,9 @@ export default memo(() => {
       <IsShowLyricRoma />
       <IsS2T />
       <MaxCache />
+      <IsEnableAutoToggleSource />
+      <ToggleSourceMaxRetry />
+      <FailureStrategy />
       <PlayHighQuality />
     </Section>
   )

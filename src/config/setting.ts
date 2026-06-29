@@ -38,10 +38,10 @@ const mergeSetting = (
       const isPrimitive = checkPrimitiveType(targetValue)
       let shouldSkip = false
       
-      if (!isPrimitive && key !== 'common.navStatus' && key !== 'common.navOrder' && key !== 'common.sectionExpandedStatus') {
+      if (!isPrimitive && key !== 'common.navStatus' && key !== 'common.navOrder' && key !== 'common.sectionExpandedStatus' && key !== 'player.failureStrategy') {
         shouldSkip = true
       } 
-      else if (key === 'common.navStatus' || key === 'common.navOrder' || key === 'common.sectionExpandedStatus') {
+      else if (key === 'common.navStatus' || key === 'common.navOrder' || key === 'common.sectionExpandedStatus' || key === 'player.failureStrategy') {
         if (Array.isArray(targetValue) && Array.isArray(originSettingCopy[key])) {
           if (arraysEqual(targetValue, originSettingCopy[key])) {
             shouldSkip = true

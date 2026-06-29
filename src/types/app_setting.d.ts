@@ -266,6 +266,21 @@ declare global {
       'player.isEnableSlideSwitchSong': boolean
 
       /**
+       * 是否启用自动切换音源（播放失败时自动尝试其他音源）
+       */
+      'player.enableAutoToggleSource': boolean
+
+      /**
+       * 自动切换音源最大重试次数
+       */
+      'player.toggleSourceMaxRetry': number
+
+      /**
+       * 播放失败策略优先级（按顺序执行）
+       */
+      'player.failureStrategy': string[]
+
+      /**
        * 播放详情页-歌词对齐方式
        */
       'playDetail.style.align': 'center' | 'left' | 'right'

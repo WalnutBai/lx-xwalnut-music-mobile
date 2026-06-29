@@ -101,7 +101,6 @@ const styles = createStyle({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginLeft: -10,
     marginBottom: 10,
   },
   title: {

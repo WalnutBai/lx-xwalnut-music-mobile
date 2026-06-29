@@ -14,6 +14,7 @@ import { getList, setPlayMusicInfo, setMusicInfo, setPlayListId } from '@/core/p
 import { clearPlayedList, addPlayedList, removePlayedList } from '@/core/player/playedList'
 import { clearTempPlayeList, removeTempPlayList } from '@/core/player/tempPlayList'
 import { getMusicUrl, getPicPath, getLyricInfo } from '@/core/music'
+import { getOtherSource, getOnlineOtherSourceMusicUrl, getPlayQuality, QUALITY_RANK, tryUserDefinedSourceToggle } from '@/core/music/utils'
 import { requestMsg } from '@/utils/message'
 import { getRandom } from '@/utils/common'
 import { filterList } from './utils'
@@ -107,6 +108,185 @@ const delayRetry = async (
     }
   })
 }
+type FailureStrategy = 'togglePlatform' | 'lowerQuality' | 'toggleSource' | 'playNext'
+
+const executeFailureStrategy = async (
+  musicInfo: LX.Music.MusicInfo | LX.Download.ListItem,
+  isRefresh: boolean,
+  error: any
+): Promise<string | null> => {
+  const strategies = (settingState.setting['player.failureStrategy'] ?? []) as FailureStrategy[]
+  const currentMusicInfo = 'progress' in musicInfo ? musicInfo.metadata.musicInfo : musicInfo
+  const isOnline =
+    currentMusicInfo &&
+    'meta' in currentMusicInfo &&
+    '_qualitys' in ((currentMusicInfo as any).meta ?? {})
+
+  const 播放策略名称: Record<string, string> = {
+    togglePlatform: '切换平台',
+    lowerQuality: '降低音质',
+    toggleSource: '切换音源',
+    playNext: '播放下一首',
+  }
+
+  console.log('[播放策略] ====== 播放失败，开始执行失败策略 ======')
+  console.log('[播放策略] 原始设置值:', JSON.stringify(settingState.setting['player.failureStrategy']))
+  console.log('[播放策略] 解析后策略队列:', strategies.map(s => 播放策略名称[s] || s))
+  console.log('[播放策略] 当前音质偏好:', settingState.setting['player.playQuality'])
+  console.log('[播放策略] 自动换音源:', settingState.setting['player.enableAutoToggleSource'] ? '开启' : '关闭', '| 最大尝试次数:', settingState.setting['player.toggleSourceMaxRetry'])
+  console.log('[播放策略] 歌曲:', (currentMusicInfo as any)?.name, '| 当前音源:', (currentMusicInfo as any)?.source, '| 是否在线:', isOnline ? '是' : '否')
+  console.log('[播放策略] 错误信息:', error?.message ?? error)
+
+  for (let i = 0; i < strategies.length; i++) {
+    const strategy = strategies[i]
+    if (global.lx.isPlayedStop || diffCurrentMusicInfo(musicInfo)) {
+      console.log('[播放策略] 播放已停止或歌曲已切换，终止策略执行')
+      return null
+    }
+
+    console.log(`[播放策略] ---- 执行策略 ${i + 1}/${strategies.length}: ${播放策略名称[strategy] || strategy} ----`)
+
+    switch (strategy) {
+      case 'togglePlatform': {
+        if (!isOnline) {
+          console.log('[播放策略] [切换平台] 非在线歌曲，跳过')
+          break
+        }
+        try {
+          setStatusText(global.i18n.t('toggle_source_try'))
+          const otherSources = await getOtherSource(musicInfo)
+          console.log('[播放策略] [切换平台] 可用其他平台:', otherSources.map((s: any) => s.source))
+          if (otherSources.length > 0) {
+            const PLATFORM_TIMEOUT_MS = 15000
+            const platformTimeout = new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error('切换平台超时')), PLATFORM_TIMEOUT_MS)
+            )
+            const result = await Promise.race([
+              getOnlineOtherSourceMusicUrl({
+                musicInfos: [...otherSources],
+                onToggleSource: (mInfo) => {
+                  if (diffCurrentMusicInfo(musicInfo)) return
+                  console.log('[播放策略] [切换平台] >>> 正在尝试平台:', mInfo?.source, '| 歌曲:', mInfo?.name, '| 歌手:', mInfo?.singer)
+                  setStatusText(global.i18n.t('toggle_source_try'))
+                },
+                isRefresh,
+                retryedSource: [(currentMusicInfo as LX.Music.MusicInfoOnline).source],
+              }),
+              platformTimeout,
+            ])
+            if (result.url) {
+              console.log('[播放策略] [切换平台] 成功! 平台:', (result.musicInfo as any)?.source)
+              return result.url
+            }
+            console.log('[播放策略] [切换平台] 所有平台均失败，继续下一个策略')
+          } else {
+            console.log('[播放策略] [切换平台] 无可用平台')
+          }
+        } catch (e: any) {
+          console.log('[播放策略] [切换平台] 失败:', e?.message)
+        }
+        break
+      }
+      case 'lowerQuality': {
+        if (!isOnline) {
+          console.log('[播放策略] [降低音质] 非在线歌曲，跳过')
+          break
+        }
+        try {
+          const onlineInfo = currentMusicInfo as LX.Music.MusicInfoOnline
+          const preferredQuality = settingState.setting['player.playQuality']
+          const availableQualities = Object.keys(
+            onlineInfo.meta._qualitys ?? {}
+          ) as LX.Quality[]
+          const sortedQualities = availableQualities
+            .filter((q) => QUALITY_RANK.includes(q))
+            .sort((a, b) => QUALITY_RANK.indexOf(a) - QUALITY_RANK.indexOf(b))
+
+          const preferredIndex = QUALITY_RANK.indexOf(preferredQuality)
+          const lowerQualities = sortedQualities.filter((q) => {
+            const idx = QUALITY_RANK.indexOf(q)
+            return preferredIndex >= 0 ? idx > preferredIndex : true
+          })
+
+          console.log('[播放策略] [降低音质] 当前音质:', preferredQuality, '| 可降级:', lowerQualities)
+
+          let lowerQualitySuccess = false
+          for (const quality of lowerQualities) {
+            if (global.lx.isPlayedStop || diffCurrentMusicInfo(musicInfo)) {
+              console.log('[播放策略] [降低音质] 播放已停止，终止')
+              return null
+            }
+            try {
+              setStatusText(global.i18n.t('player__getting_url'))
+              const url = await getMusicUrl({
+                musicInfo,
+                quality,
+                isRefresh,
+                allowToggleSource: false,
+              })
+              if (url) {
+                console.log(`[播放策略] [降低音质] 成功! 降级到: ${quality}`)
+                lowerQualitySuccess = true
+                return url
+              }
+            } catch {
+              console.log(`[播放策略] [降低音质] ${quality} 失败，尝试下一个`)
+              continue
+            }
+          }
+          if (!lowerQualitySuccess) {
+            console.log('[播放策略] [降低音质] 所有可降级音质均失败')
+          }
+        } catch (e: any) {
+          console.log('[播放策略] [降低音质] 异常:', e?.message)
+        }
+        break
+      }
+      case 'toggleSource': {
+        if (!isOnline) {
+          console.log('[播放策略] [切换音源] 非在线歌曲，跳过')
+          break
+        }
+        if (!settingState.setting['player.enableAutoToggleSource']) {
+          console.log('[播放策略] [切换音源] 自动换音源已关闭，跳过')
+          break
+        }
+        try {
+          setStatusText(global.i18n.t('toggle_source_try'))
+          const maxRetry = settingState.setting['player.toggleSourceMaxRetry'] ?? 5
+          console.log('[播放策略] [切换音源] 最大尝试次数:', maxRetry)
+          const result = await tryUserDefinedSourceToggle({
+            musicInfo: currentMusicInfo as LX.Music.MusicInfoOnline,
+            isRefresh,
+            maxRetry,
+            onToggleSource: (mInfo) => {
+              if (diffCurrentMusicInfo(musicInfo)) return
+              console.log('[播放策略] [切换音源] >>> 正在尝试插件:', mInfo?.source, '| 歌曲:', mInfo?.name)
+              setStatusText(global.i18n.t('toggle_source_try'))
+            },
+          })
+          if (result.url) {
+            console.log('[播放策略] [切换音源] 成功! 插件:', (result.musicInfo as any)?.source)
+            return result.url
+          }
+          console.log('[播放策略] [切换音源] 所有插件均失败，继续下一个策略')
+        } catch (e: any) {
+          console.log('[播放策略] [切换音源] 失败:', e?.message)
+        }
+        break
+      }
+      case 'playNext': {
+        console.log('[播放策略] [播放下一首] 执行播放下一首')
+        void playNext(true)
+        return null
+      }
+    }
+  }
+
+  console.log('[播放策略] ====== 所有策略执行完毕，均未成功 ======')
+  throw error
+}
+
 const getMusicPlayUrl = async (
   musicInfo: LX.Music.MusicInfo | LX.Download.ListItem,
   isRefresh = false,
@@ -176,7 +356,6 @@ const getMusicPlayUrl = async (
       return url
     })
     .catch(async (err) => {
-      // console.log('err', err.message)
       if (
         global.lx.isPlayedStop ||
         diffCurrentMusicInfo(musicInfo) ||
@@ -186,9 +365,7 @@ const getMusicPlayUrl = async (
 
       if (err.message == requestMsg.tooManyRequests) return delayRetry(musicInfo, isRefresh)
 
-      if (!isRetryed) return getMusicPlayUrl(musicInfo, isRefresh, true)
-
-      throw err
+      return executeFailureStrategy(musicInfo, isRefresh, err)
     })
 }
 

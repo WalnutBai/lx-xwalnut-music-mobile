@@ -98,6 +98,9 @@ const defaultSetting: LX.AppSetting = {
   'player.isS2t': true,
   'player.isShowBluetoothLyric': false,
   'player.isEnableSlideSwitchSong': false,
+  'player.enableAutoToggleSource': true,
+  'player.toggleSourceMaxRetry': 5,
+  'player.failureStrategy': ['lowerQuality', 'togglePlatform', 'playNext', 'toggleSource'],
 
   'playDetail.isCoverSpin': true,
   'playDetail.style.newUI': true,

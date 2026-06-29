@@ -14,6 +14,7 @@ import BackgroundTimer from 'react-native-background-timer'
 import { apis } from '@/utils/musicSdk/api-source'
 import wySdk from '@/utils/musicSdk/wy'
 import { log } from '@/utils/log'
+import { state as userApiState } from '@/store/userApi'
 
 const isEnableUserApiLog = () => global.lx.isEnableUserApiLog
 
@@ -604,6 +605,121 @@ export const getOnlineOtherSourceMusicUrl = async ({
         retryedSource,
       })
     })
+}
+
+export const getUserDefinedSourceList = (
+  excludeSourceId?: string
+): Array<{ id: string; name: string }> => {
+  const currentSource = settingState.setting['common.apiSource']
+
+  const builtinSources = (musicSdk as any).sources
+    .filter((source: any) => source.id !== excludeSourceId)
+    .map((source: any) => ({ id: source.id, name: source.name }))
+
+  const userSources = userApiState.list
+    .filter(api => api.id !== excludeSourceId)
+    .map(api => ({ id: api.id, name: api.name }))
+
+  if (/^user_api/.test(currentSource)) {
+    const otherUserSources = userSources.filter(s => s.id !== currentSource)
+    return [...otherUserSources, ...builtinSources]
+  }
+
+  return [...userSources, ...builtinSources.filter((s: any) => s.id !== currentSource)]
+}
+
+export const tryUserDefinedSourceToggle = async ({
+  musicInfo,
+  isRefresh,
+  maxRetry,
+  onToggleSource,
+}: {
+  musicInfo: LX.Music.MusicInfoOnline
+  isRefresh: boolean
+  maxRetry: number
+  onToggleSource: (musicInfo?: LX.Music.MusicInfoOnline) => void
+}): Promise<{
+  url: string
+  musicInfo: LX.Music.MusicInfoOnline
+  quality: LX.Quality
+  isFromCache: boolean
+}> => {
+  const sourceList = getUserDefinedSourceList(musicInfo.source)
+  const preferredQuality = settingState.setting['player.playQuality']
+  const platformSdk = (musicSdk as any)[musicInfo.source]
+  const originalApiSource = settingState.setting['common.apiSource']
+
+  console.log('[播放策略] [切换音源] ========== 开始切换插件 ==========')
+  console.log('[播放策略] [切换音源] 当前平台:', musicInfo.source, '| 当前API源:', originalApiSource)
+  console.log('[播放策略] [切换音源] 可用插件列表:', sourceList.map(s => `${s.name}(${s.id})`).join(', ') || '无')
+  console.log('[播放策略] [切换音源] 最大尝试次数:', maxRetry)
+
+  let triedCount = 0
+  const PLUGIN_TIMEOUT_MS = 8000
+
+  const tryWithApiSource = async (apiSourceId: string): Promise<string | null> => {
+    if (apiSourceId !== originalApiSource) {
+      settingState.setting['common.apiSource'] = apiSourceId
+      if (/^user_api/.test(apiSourceId)) {
+        try {
+          const { setApiSource } = await import('@/core/apiSource')
+          setApiSource(apiSourceId)
+          await global.lx.apiInitPromise[0]
+        } catch {
+          settingState.setting['common.apiSource'] = originalApiSource
+          return null
+        }
+      } else {
+        settingState.setting['common.apiSource'] = apiSourceId
+      }
+    }
+
+    try {
+      const oldMusicInfo = toOldMusicInfo(musicInfo)
+      const result = await platformSdk.getMusicUrl(oldMusicInfo, preferredQuality).promise
+      return result?.url ?? null
+    } catch (err: any) {
+      console.log(`[播放策略] [切换音源]   getMusicUrl 错误: ${err?.message || err}`)
+      return null
+    }
+  }
+
+  const tryWithApiSourceWithTimeout = async (apiSourceId: string): Promise<string | null> => {
+    const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), PLUGIN_TIMEOUT_MS))
+    return Promise.race([tryWithApiSource(apiSourceId), timeout])
+  }
+
+  for (const source of sourceList) {
+    if (triedCount >= maxRetry) break
+    if (global.lx.isPlayedStop) break
+
+    triedCount++
+    console.log(`[播放策略] [切换音源] >>> 第 ${triedCount} 次尝试 - 插件: "${source.name}" (${source.id})`)
+
+    try {
+      const url = await tryWithApiSourceWithTimeout(source.id)
+
+      if (url) {
+        settingState.setting['common.apiSource'] = originalApiSource
+        console.log(`[播放策略] [切换音源] ========== 切换插件成功! ==========`)
+        console.log(`[播放策略] [切换音源] 成功插件: "${source.name}" (${source.id})`)
+        onToggleSource(musicInfo)
+        return {
+          url,
+          musicInfo,
+          quality: preferredQuality,
+          isFromCache: false,
+        }
+      }
+      console.log(`[播放策略] [切换音源]   插件 "${source.name}" 超时或未返回播放地址`)
+    } catch (err: any) {
+      console.log(`[播放策略] [切换音源]   插件 "${source.name}" 请求失败: ${err?.message || err}`)
+    }
+  }
+
+  settingState.setting['common.apiSource'] = originalApiSource
+  console.log('[播放策略] [切换音源] ========== 所有插件均尝试失败 ==========')
+  throw new Error(global.i18n.t('toggle_source_failed'))
 }
 
 /**
